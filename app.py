@@ -102,11 +102,27 @@ section[data-testid="stSidebar"]::before {
 }
 
 .ai-box {
-    background: #161b22; border-left: 3px solid #58a6ff;
-    border-radius: 0 8px 8px 0; padding: 1rem 1.2rem;
+    background: #161b22; border: 1px solid #21262d;
+    border-radius: 8px; padding: 0.2rem 0.5rem;
     color: #c9d1d9; font-size: 0.9rem; line-height: 1.75;
     margin-top: 0.5rem;
 }
+.ai-section {
+    border-left: 3px solid #58a6ff; padding: 0.7rem 1rem;
+    margin: 0.6rem 0; border-radius: 0 6px 6px 0;
+    background: #0d1117;
+}
+.ai-heading {
+    display: block; font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: #58a6ff; margin-bottom: 8px;
+}
+.ai-section ul, .ai-section ol {
+    margin: 0; padding-left: 1.2rem; color: #c9d1d9;
+}
+.ai-section li { margin-bottom: 5px; font-size: 13px; }
+.ai-section p  { margin: 0; font-size: 13px; color: #c9d1d9; }
+.ai-section strong { color: #e6edf3; }
 
 .hist-row {
     display: flex; justify-content: space-between;
@@ -289,21 +305,7 @@ Question: {question}"""
                 resp = client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[
-                        {"role":"system","content":"""You are an expert automotive diagnostic technician. Always respond in this exact format with these four sections:
-
-**What could be causing this:**
-List 2-3 most likely causes based on the sensor readings and OBD code provided.
-
-**What you should do:**
-List 2-3 specific action steps the user should take, in order of urgency.
-
-**Estimated cost per repair:**
-For each cause listed above, give a realistic parts + labor cost range in USD (e.g. $150 – $400). Be specific.
-
-**Overall urgency:**
-One sentence on how urgently this needs attention — can they keep driving, should they schedule soon, or stop immediately.
-
-Keep all answers clear, plain-English, and practical. No technical jargon."""},
+                        {"role":"system","content":"You are an expert automotive diagnostic technician. Always respond using exactly this HTML structure with no markdown, no asterisks, no ** symbols ever:\n\n<div class='ai-section'><span class='ai-heading'>What could be causing this</span><ul><li>cause 1</li><li>cause 2</li><li>cause 3</li></ul></div><div class='ai-section'><span class='ai-heading'>What you should do</span><ol><li>action 1</li><li>action 2</li><li>action 3</li></ol></div><div class='ai-section'><span class='ai-heading'>Estimated cost per repair</span><ul><li><strong>Repair name:</strong> $X - $Y (brief reason)</li><li><strong>Repair name:</strong> $X - $Y (brief reason)</li></ul></div><div class='ai-section'><span class='ai-heading'>Overall urgency</span><p>One sentence here.</p></div>\n\nAlways include the dollar sign on all costs. Keep language plain and practical. No markdown ever."},
                         {"role":"user","content":prompt}
                     ]
                 )
