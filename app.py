@@ -289,7 +289,21 @@ Question: {question}"""
                 resp = client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[
-                        {"role":"system","content":"You are an expert automotive diagnostic technician. Give clear, practical, plain-English advice in 3-5 sentences."},
+                        {"role":"system","content":"""You are an expert automotive diagnostic technician. Always respond in this exact format with these four sections:
+
+**What could be causing this:**
+List 2-3 most likely causes based on the sensor readings and OBD code provided.
+
+**What you should do:**
+List 2-3 specific action steps the user should take, in order of urgency.
+
+**Estimated cost per repair:**
+For each cause listed above, give a realistic parts + labor cost range in USD (e.g. $150 – $400). Be specific.
+
+**Overall urgency:**
+One sentence on how urgently this needs attention — can they keep driving, should they schedule soon, or stop immediately.
+
+Keep all answers clear, plain-English, and practical. No technical jargon."""},
                         {"role":"user","content":prompt}
                     ]
                 )
