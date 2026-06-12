@@ -214,6 +214,34 @@ with st.sidebar:
         elif estimate_btn:
             st.warning("Please describe your symptoms first.")
 
+        if st.session_state.get("ai_estimated"):
+            e = st.session_state
+            normal = {'rpm':(600,2000),'oil':(2.5,5.0),'fuel':(5.0,20.0),'coolp':(1.5,4.0),'oiltemp':(70,90),'cool':(70,90)}
+            rows = [
+                ("Engine RPM",      f"{e['est_rpm']} rpm",      e['est_rpm'],      *normal['rpm']),
+                ("Oil Pressure",    f"{e['est_oil']}",           e['est_oil'],      *normal['oil']),
+                ("Fuel Pressure",   f"{e['est_fuel']}",          e['est_fuel'],     *normal['fuel']),
+                ("Coolant Pressure",f"{e['est_coolp']}",         e['est_coolp'],    *normal['coolp']),
+                ("Oil Temp °C",     f"{e['est_oiltemp']}°C",     e['est_oiltemp'],  *normal['oiltemp']),
+                ("Coolant Temp °C", f"{e['est_cool']}°C",        e['est_cool'],     *normal['cool']),
+            ]
+            cards = ""
+            for label, val_str, val, lo, hi in rows:
+                if lo <= val <= hi:
+                    dot = "🟢"; col = "#4ade80"
+                elif val < lo * 0.75 or val > hi * 1.25:
+                    dot = "🔴"; col = "#f87171"
+                else:
+                    dot = "🟡"; col = "#fbbf24"
+                cards += f'<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #21262d;"><span style="color:#c9d1d9;font-size:12px;">{dot} {label}</span><span style="color:{col};font-size:12px;font-weight:600;">{val_str}</span></div>'
+            st.markdown(f'''
+            <div style="background:#161b22;border:1px solid #1f6feb55;border-radius:8px;padding:12px 16px;margin-top:12px;">
+                <div style="color:#58a6ff;font-size:12px;font-weight:600;margin-bottom:8px;">⚡ AI-Estimated Sensor Values</div>
+                <div style="color:#8b949e;font-size:11px;margin-bottom:10px;">These values have been loaded into the sliders. Switch to the 📊 tab to review and adjust.</div>
+                {cards}
+                <div style="color:#484f58;font-size:10px;margin-top:8px;">🟢 Normal range &nbsp;·&nbsp; 🟡 Slightly off &nbsp;·&nbsp; 🔴 Concerning</div>
+            </div>''', unsafe_allow_html=True)
+
         # Carry over tab2 values to main area
         if st.session_state.get("ai_estimated"):
             obd_code = st.session_state.get("est_obd", "")
@@ -289,6 +317,32 @@ with col_results:
         proba   = model.predict_proba(reading)[0]
         while len(proba) < 3:
             proba = list(proba) + [0.0]
+        # Lock results into session state
+        st.session_state["last_pred"] = int(pred)
+        st.session_state["last_proba"] = [float(p) for p in proba]
+        st.session_state["last_rpm"] = rpm
+        st.session_state["last_oil"] = oil
+        st.session_state["last_fuel"] = fuel
+        st.session_state["last_coolp"] = coolp
+        st.session_state["last_oiltemp"] = oiltemp
+        st.session_state["last_cool"] = cool
+        st.session_state["last_obd"] = obd_code
+        st.session_state["last_symptoms"] = symptoms
+        st.session_state["last_question"] = question
+        st.session_state["has_result"] = True
+
+    if st.session_state.get("has_result"):
+        pred    = st.session_state["last_pred"]
+        proba   = st.session_state["last_proba"]
+        rpm     = st.session_state["last_rpm"]
+        oil     = st.session_state["last_oil"]
+        fuel    = st.session_state["last_fuel"]
+        coolp   = st.session_state["last_coolp"]
+        oiltemp = st.session_state["last_oiltemp"]
+        cool    = st.session_state["last_cool"]
+        obd_code = st.session_state["last_obd"]
+        symptoms = st.session_state["last_symptoms"]
+        question = st.session_state["last_question"]
 
         status_map = {0:'🟢  HEALTHY', 1:'🟡  AT RISK', 2:'🔴  CRITICAL'}
         class_map  = {0:'status-healthy', 1:'status-atrisk', 2:'status-critical'}
@@ -513,7 +567,8 @@ Be specific to the readings. Use realistic 2024 US prices."""
             writer.writerow([datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), status_map[pred], rpm, oil, fuel, coolp, oiltemp, cool, obd_code or 'None', cost_map[pred]['range'], f"{max(proba):.0%}"])
             st.download_button("⬇️ Download Diagnosis as CSV", csv_buf.getvalue(), file_name=f"engine_diagnosis_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.csv", mime="text/csv")
 
-        st.session_state.history.append({
+        if run:
+            st.session_state.history.append({
             'time':    datetime.datetime.now().strftime('%H:%M:%S'),
             'status':  status_map[pred],
             'rpm':     rpm, 'coolant': cool,
@@ -539,7 +594,7 @@ with col_charts:
     ]
     df_chart = pd.DataFrame(chart_data, columns=['rpm','oil','fuel','coolp','oiltemp','cool','condition'])
     df_chart['Status'] = df_chart['condition'].map({0:'Healthy',1:'At Risk',2:'Critical'})
-    if run:
+    if st.session_state.get("has_result"):
         your = pd.DataFrame([[rpm,oil,fuel,coolp,oiltemp,cool,-1,'Your Reading']],
                              columns=['rpm','oil','fuel','coolp','oiltemp','cool','condition','Status'])
         df_chart = pd.concat([df_chart, your], ignore_index=True)
