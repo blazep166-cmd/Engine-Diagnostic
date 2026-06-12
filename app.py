@@ -194,20 +194,23 @@ with st.sidebar:
                     ]
                 )
                 try:
-                    est_data = json.loads(est_resp.choices[0].message.content)
-                    st.session_state["est_rpm"] = int(est_data.get("rpm", 800))
-                    st.session_state["est_oil"] = float(est_data.get("oil", 3.3))
-                    st.session_state["est_fuel"] = float(est_data.get("fuel", 10.0))
-                    st.session_state["est_coolp"] = float(est_data.get("coolp", 2.5))
-                    st.session_state["est_oiltemp"] = float(est_data.get("oiltemp", 76.0))
-                    st.session_state["est_cool"] = float(est_data.get("cool", 78.0))
+                    raw = est_resp.choices[0].message.content.strip()
+                    # Strip markdown code fences if present
+                    raw = raw.replace("```json", "").replace("```", "").strip()
+                    est_data = json.loads(raw)
+                    st.session_state["est_rpm"] = max(61, min(2239, int(float(est_data.get("rpm", 800)))))
+                    st.session_state["est_oil"] = max(0.0, min(7.3, round(float(est_data.get("oil", 3.3)), 1)))
+                    st.session_state["est_fuel"] = max(0.0, min(40.0, round(float(est_data.get("fuel", 10.0)), 1)))
+                    st.session_state["est_coolp"] = max(0.0, min(8.0, round(float(est_data.get("coolp", 2.5)), 1)))
+                    st.session_state["est_oiltemp"] = max(50.0, min(120.0, round(float(est_data.get("oiltemp", 76.0)), 1)))
+                    st.session_state["est_cool"] = max(61.0, min(196.0, round(float(est_data.get("cool", 78.0)), 1)))
                     st.session_state["ai_estimated"] = True
                     st.session_state["est_symptoms"] = symptom_input
                     st.session_state["est_obd"] = obd_code_tab2
                     st.session_state["est_question"] = question_tab2
                     st.rerun()
-                except:
-                    st.error("Could not parse sensor estimates. Please try describing your symptoms in more detail.")
+                except Exception as e:
+                    st.error(f"Parsing error: {e}. Raw response: {est_resp.choices[0].message.content[:200]}")
         elif estimate_btn:
             st.warning("Please describe your symptoms first.")
 
