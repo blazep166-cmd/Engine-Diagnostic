@@ -176,6 +176,14 @@ with st.expander("📖  New here? Click to learn what each sensor means"):
 
 col_results, col_charts = st.columns([1, 1.3], gap="large")
 
+st.markdown("""
+<div style="text-align:center;padding:6px 0 2px;margin-bottom:4px;">
+    <span style="color:#484f58;font-size:11px;letter-spacing:0.05em;">↓ &nbsp; Results appear below — scroll down after running a diagnosis &nbsp; ↓</span>
+</div>
+""", unsafe_allow_html=True)
+
+col_results, col_charts = st.columns([1, 1.3], gap="large")
+
 with col_results:
     if run:
         reading = pd.DataFrame([[rpm,oil,fuel,coolp,oiltemp,cool]], columns=features)
@@ -264,7 +272,7 @@ Use realistic 2024 US repair costs:
                 resp = client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[
-                        {"role":"system","content":"You are an expert automotive diagnostic technician in the US. Always respond using exactly this HTML structure — no markdown, no asterisks ever:\n\n<div class='ai-section'><span class='ai-heading'>What could be causing this</span><ul><li>specific cause 1</li><li>specific cause 2</li><li>specific cause 3</li></ul></div><div class='ai-section'><span class='ai-heading'>What you should do</span><ol><li>specific action 1</li><li>specific action 2</li><li>specific action 3</li></ol></div><div class='ai-section'><span class='ai-heading'>Estimated cost per repair</span><ul><li><strong>Specific repair name:</strong> $X – $Y parts + labor</li><li><strong>Specific repair name:</strong> $X – $Y parts + labor</li><li><strong>Specific repair name:</strong> $X – $Y parts + labor</li></ul></div><div class='ai-section'><span class='ai-heading'>Overall urgency</span><p>One clear sentence.</p></div>\n\nAlways use realistic 2024 US repair costs with dollar signs."},
+                        {"role":"system","content":"You are an expert automotive diagnostic technician in the US. Your only area of expertise is vehicle engines, car repairs, and automotive diagnostics.\n\nIf the user's question is NOT related to engines, vehicles, or car repairs, respond with ONLY this HTML and nothing else:\n<div class='ai-section'><span class='ai-heading'>Out of my lane!</span><p>That question is outside my expertise — I'm an engine diagnostic AI, so I can only help with vehicle and engine-related questions. Try asking something like: \"Is it safe to keep driving?\" or \"What could be causing this warning light?\"</p></div>\n\nIf the question IS engine/vehicle related, always respond using exactly this HTML structure — no markdown, no asterisks ever:\n\n<div class='ai-section'><span class='ai-heading'>What could be causing this</span><ul><li>specific cause 1</li><li>specific cause 2</li><li>specific cause 3</li></ul></div><div class='ai-section'><span class='ai-heading'>What you should do</span><ol><li>specific action 1</li><li>specific action 2</li><li>specific action 3</li></ol></div><div class='ai-section'><span class='ai-heading'>Estimated cost per repair</span><ul><li><strong>Specific repair name:</strong> $X – $Y parts + labor</li><li><strong>Specific repair name:</strong> $X – $Y parts + labor</li><li><strong>Specific repair name:</strong> $X – $Y parts + labor</li></ul></div><div class='ai-section'><span class='ai-heading'>Overall urgency</span><p>One clear sentence.</p></div>\n\nAlways use realistic 2024 US repair costs with dollar signs."},
                         {"role":"user","content":prompt}
                     ]
                 )
