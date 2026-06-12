@@ -4,6 +4,7 @@ import plotly.express as px
 import pickle, base64, gzip, json
 from openai import OpenAI
 import datetime
+import json
 
 st.set_page_config(page_title="Engine AI Diagnostic", page_icon="🔧", layout="wide")
 
@@ -107,48 +108,127 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div class="section-title">Sensor Readings</div>', unsafe_allow_html=True)
+    # Default values — overridden by whichever tab is active
+    rpm = st.session_state.get("est_rpm", 800)
+    oil = st.session_state.get("est_oil", 3.3)
+    fuel = st.session_state.get("est_fuel", 10.0)
+    coolp = st.session_state.get("est_coolp", 2.5)
+    oiltemp = st.session_state.get("est_oiltemp", 76.0)
+    cool = st.session_state.get("est_cool", 78.0)
+    obd_code = ""
+    symptoms = ""
+    question = ""
 
-    st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Engine RPM <span class="normal-range">Normal: 600–2,000</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="sensor-tip">How fast your engine is spinning — check your dashboard or OBD app.</div>', unsafe_allow_html=True)
-    rpm = st.slider("rpm", 61, 2239, 800, 10, label_visibility="collapsed")
-    st.markdown(f'<div class="slider-val">{rpm} rpm</div>', unsafe_allow_html=True)
+    tab1, tab2 = st.tabs(["📊 I Know My Readings", "🤔 I Don't Know My Readings"])
 
-    st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Oil Pressure <span class="normal-range">Normal: 2.5–5.0</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="sensor-tip">Keeps engine parts lubricated — low oil pressure causes serious damage.</div>', unsafe_allow_html=True)
-    oil = st.slider("oil", 0.0, 7.3, 3.3, 0.1, label_visibility="collapsed")
-    st.markdown(f'<div class="slider-val">{oil:.1f}</div>', unsafe_allow_html=True)
+    with tab1:
+        st.markdown('<div class="section-title" style="margin-top:0.5rem;">Sensor Readings</div>', unsafe_allow_html=True)
 
-    st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Fuel Pressure <span class="normal-range">Normal: 5.0–20.0</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="sensor-tip">Pressure delivering fuel to the engine — low means the engine is starved.</div>', unsafe_allow_html=True)
-    fuel = st.slider("fuel", 0.0, 40.0, 10.0, 0.1, label_visibility="collapsed")
-    st.markdown(f'<div class="slider-val">{fuel:.1f}</div>', unsafe_allow_html=True)
+        st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Engine RPM <span class="normal-range">Normal: 600–2,000</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="sensor-tip">How fast your engine is spinning — check your dashboard or OBD app.</div>', unsafe_allow_html=True)
+        rpm = st.slider("rpm", 61, 2239, st.session_state.get("est_rpm", 800), 10, label_visibility="collapsed")
+        st.markdown(f'<div class="slider-val">{rpm} rpm</div>', unsafe_allow_html=True)
 
-    st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Coolant Pressure <span class="normal-range">Normal: 1.5–4.0</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="sensor-tip">Pressure in the cooling system — low means coolant may be leaking.</div>', unsafe_allow_html=True)
-    coolp = st.slider("coolp", 0.0, 8.0, 2.5, 0.1, label_visibility="collapsed")
-    st.markdown(f'<div class="slider-val">{coolp:.1f}</div>', unsafe_allow_html=True)
+        st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Oil Pressure <span class="normal-range">Normal: 2.5–5.0</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="sensor-tip">Keeps engine parts lubricated — low oil pressure causes serious damage.</div>', unsafe_allow_html=True)
+        oil = st.slider("oil", 0.0, 7.3, st.session_state.get("est_oil", 3.3), 0.1, label_visibility="collapsed")
+        st.markdown(f'<div class="slider-val">{oil:.1f}</div>', unsafe_allow_html=True)
 
-    st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Oil Temp °C <span class="normal-range">Normal: 70–90°C</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="sensor-tip">Temperature of the engine oil — too hot means poor lubrication.</div>', unsafe_allow_html=True)
-    oiltemp = st.slider("oiltemp", 50.0, 120.0, 76.0, 0.5, label_visibility="collapsed")
-    st.markdown(f'<div class="slider-val">{oiltemp:.1f}°C</div>', unsafe_allow_html=True)
+        st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Fuel Pressure <span class="normal-range">Normal: 5.0–20.0</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="sensor-tip">Pressure delivering fuel to the engine — low means the engine is starved.</div>', unsafe_allow_html=True)
+        fuel = st.slider("fuel", 0.0, 40.0, st.session_state.get("est_fuel", 10.0), 0.1, label_visibility="collapsed")
+        st.markdown(f'<div class="slider-val">{fuel:.1f}</div>', unsafe_allow_html=True)
 
-    st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Coolant Temp °C <span class="normal-range">Normal: 70–90°C</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="sensor-tip">Temperature of the cooling fluid — above 100°C means overheating.</div>', unsafe_allow_html=True)
-    cool = st.slider("cool", 61.0, 196.0, 78.0, 0.5, label_visibility="collapsed")
-    st.markdown(f'<div class="slider-val">{cool:.1f}°C</div>', unsafe_allow_html=True)
+        st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Coolant Pressure <span class="normal-range">Normal: 1.5–4.0</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="sensor-tip">Pressure in the cooling system — low means coolant may be leaking.</div>', unsafe_allow_html=True)
+        coolp = st.slider("coolp", 0.0, 8.0, st.session_state.get("est_coolp", 2.5), 0.1, label_visibility="collapsed")
+        st.markdown(f'<div class="slider-val">{coolp:.1f}</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="section-title" style="margin-top:1.5rem;">OBD Code</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sensor-tip">Check engine light on? A $20 OBD scanner from AutoZone gives you the code. No scanner? Leave blank — the AI still works without it.</div>', unsafe_allow_html=True)
-    obd_code = st.text_input("obd", placeholder="e.g. P0301", label_visibility="collapsed")
+        st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Oil Temp °C <span class="normal-range">Normal: 70–90°C</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="sensor-tip">Temperature of the engine oil — too hot means poor lubrication.</div>', unsafe_allow_html=True)
+        oiltemp = st.slider("oiltemp", 50.0, 120.0, st.session_state.get("est_oiltemp", 76.0), 0.5, label_visibility="collapsed")
+        st.markdown(f'<div class="slider-val">{oiltemp:.1f}°C</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="section-title">Describe Symptoms <span style="color:#484f58;font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="sensor-tip">Describe what you notice — unusual sounds, smells, vibrations, or when the problem happens. This helps the AI give a more specific diagnosis.</div>', unsafe_allow_html=True)
-    symptoms = st.text_area("symptoms", placeholder="e.g. Engine makes a knocking sound at high RPM, smells like burning oil", height=75, label_visibility="collapsed")
+        st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Coolant Temp °C <span class="normal-range">Normal: 70–90°C</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="sensor-tip">Temperature of the cooling fluid — above 100°C means overheating.</div>', unsafe_allow_html=True)
+        cool = st.slider("cool", 61.0, 196.0, st.session_state.get("est_cool", 78.0), 0.5, label_visibility="collapsed")
+        st.markdown(f'<div class="slider-val">{cool:.1f}°C</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="section-title">Ask the AI <span style="color:#484f58;font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></div>', unsafe_allow_html=True)
-    question = st.text_area("q", placeholder="e.g. Is it safe to keep driving? What is wrong with my engine?", height=75, label_visibility="collapsed")
+        if st.session_state.get("ai_estimated"):
+            st.markdown('''<div style="background:#1f2937;border:1px solid #1f6feb55;border-radius:6px;padding:8px 12px;margin-top:8px;color:#58a6ff;font-size:11px;">⚡ AI-estimated values loaded — adjust the sliders if you know your actual readings.</div>''', unsafe_allow_html=True)
+
+        st.markdown('<div class="section-title" style="margin-top:1.5rem;">OBD Code</div>', unsafe_allow_html=True)
+        st.markdown('<div class="sensor-tip">Check engine light on? A $20 OBD scanner from AutoZone gives you the code. No scanner? Leave blank — the AI still works without it.</div>', unsafe_allow_html=True)
+        obd_code = st.text_input("obd", placeholder="e.g. P0301", label_visibility="collapsed")
+
+        st.markdown('<div class="section-title">Describe Symptoms <span style="color:#484f58;font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="sensor-tip">Describe what you notice — unusual sounds, smells, vibrations, or when the problem happens.</div>', unsafe_allow_html=True)
+        symptoms = st.text_area("symptoms", placeholder="e.g. Engine makes a knocking sound at high RPM, smells like burning oil", height=75, label_visibility="collapsed")
+
+        st.markdown('<div class="section-title">Ask the AI <span style="color:#484f58;font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></div>', unsafe_allow_html=True)
+        question = st.text_area("q", placeholder="e.g. Is it safe to keep driving? What is wrong with my engine?", height=75, label_visibility="collapsed")
+
+    with tab2:
+        st.markdown('<div class="section-title" style="margin-top:0.5rem;">Describe What You Are Experiencing</div>', unsafe_allow_html=True)
+        st.markdown('<div class="sensor-tip">No OBD reader? No problem. Describe your symptoms in plain English and the AI will estimate your sensor readings for you.</div>', unsafe_allow_html=True)
+        symptom_input = st.text_area("symptom_input",
+            placeholder="e.g. My car shakes at highway speed, smells like burning oil, and the temperature gauge is higher than usual. The check engine light came on yesterday.",
+            height=130, label_visibility="collapsed")
+
+        st.markdown('<div class="section-title" style="margin-top:1rem;">OBD Code <span style="color:#484f58;font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="sensor-tip">If you have a code, enter it here — it makes the estimate more accurate.</div>', unsafe_allow_html=True)
+        obd_code_tab2 = st.text_input("obd2", placeholder="e.g. P0301", label_visibility="collapsed")
+
+        st.markdown('<div class="section-title" style="margin-top:1rem;">Ask the AI <span style="color:#484f58;font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></div>', unsafe_allow_html=True)
+        question_tab2 = st.text_area("q2", placeholder="e.g. Is it safe to keep driving?", height=75, label_visibility="collapsed")
+
+        estimate_btn = st.button("⚡ Estimate My Readings", use_container_width=True)
+
+        if estimate_btn and symptom_input:
+            with st.spinner("Analyzing your symptoms..."):
+                est_resp = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role":"system","content":"You are an automotive diagnostic expert. Based on the user's described symptoms, estimate the most likely sensor values. Respond ONLY with a valid JSON object, no explanation, no markdown, no backticks. Use exactly these keys: rpm (int), oil (float 1 decimal), fuel (float 1 decimal), coolp (float 1 decimal), oiltemp (float 1 decimal), cool (float 1 decimal). Keep all values within these ranges: rpm 61-2239, oil 0.0-7.3, fuel 0.0-40.0, coolp 0.0-8.0, oiltemp 50.0-120.0, cool 61.0-196.0."},
+                        {"role":"user","content":f"Symptoms: {symptom_input}. OBD code: {obd_code_tab2 or 'None'}. Estimate the sensor readings."}
+                    ]
+                )
+                try:
+                    est_data = json.loads(est_resp.choices[0].message.content)
+                    st.session_state["est_rpm"] = int(est_data.get("rpm", 800))
+                    st.session_state["est_oil"] = float(est_data.get("oil", 3.3))
+                    st.session_state["est_fuel"] = float(est_data.get("fuel", 10.0))
+                    st.session_state["est_coolp"] = float(est_data.get("coolp", 2.5))
+                    st.session_state["est_oiltemp"] = float(est_data.get("oiltemp", 76.0))
+                    st.session_state["est_cool"] = float(est_data.get("cool", 78.0))
+                    st.session_state["ai_estimated"] = True
+                    st.session_state["est_symptoms"] = symptom_input
+                    st.session_state["est_obd"] = obd_code_tab2
+                    st.session_state["est_question"] = question_tab2
+                    st.success("✅ Readings estimated! Switch to the '📊 I Know My Readings' tab to review and run your diagnosis.")
+                    st.markdown(f"""
+                    <div style="background:#161b22;border:1px solid #21262d;border-radius:8px;padding:12px 14px;margin-top:8px;">
+                        <div style="color:#8b949e;font-size:11px;margin-bottom:8px;">AI estimated these sensor values from your symptoms:</div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                            <div style="color:#e6edf3;font-size:12px;">🔵 RPM: <strong>{st.session_state["est_rpm"]}</strong></div>
+                            <div style="color:#e6edf3;font-size:12px;">🔵 Oil Pressure: <strong>{st.session_state["est_oil"]}</strong></div>
+                            <div style="color:#e6edf3;font-size:12px;">🔵 Fuel Pressure: <strong>{st.session_state["est_fuel"]}</strong></div>
+                            <div style="color:#e6edf3;font-size:12px;">🔵 Coolant Pressure: <strong>{st.session_state["est_coolp"]}</strong></div>
+                            <div style="color:#e6edf3;font-size:12px;">🔵 Oil Temp: <strong>{st.session_state["est_oiltemp"]}°C</strong></div>
+                            <div style="color:#e6edf3;font-size:12px;">🔵 Coolant Temp: <strong>{st.session_state["est_cool"]}°C</strong></div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                except:
+                    st.error("Could not parse sensor estimates. Please try describing your symptoms in more detail.")
+        elif estimate_btn:
+            st.warning("Please describe your symptoms first.")
+
+        # Carry over tab2 values to main area
+        if st.session_state.get("ai_estimated"):
+            obd_code = st.session_state.get("est_obd", "")
+            symptoms = st.session_state.get("est_symptoms", "")
+            question = st.session_state.get("est_question", "")
 
     # --- FEATURE 2: What-If Live Preview ---
     st.markdown('<div class="section-title" style="margin-top:0.5rem;">⚡ Live Prediction</div>', unsafe_allow_html=True)
