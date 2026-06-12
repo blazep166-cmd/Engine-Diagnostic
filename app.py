@@ -354,34 +354,37 @@ Use realistic 2024 US repair costs:
                 resp = client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[
-                        {"role":"system","content":"You are an expert automotive diagnostic technician in the US. Your only area of expertise is vehicle engines, car repairs, and automotive diagnostics.\n\nIf the user's question is NOT related to engines, respond ONLY with: <div class=\'ai-section\'><span class=\'ai-heading\'>Out of my lane!</span><p>That question is outside my expertise. Try: \'Is it safe to keep driving?\' or \'What could be causing this warning light?\'</p></div>\n\nIf an OBD code is provided, it is your PRIMARY diagnostic signal. Always lead with the specific direct causes of that exact code, then cross-reference sensor readings to confirm the most likely cause. Never give generic causes when a specific code is present.\n\nFor engine/vehicle questions, respond with exactly this HTML — no markdown, no asterisks:\n<div class=\'ai-section\'><span class=\'ai-heading\'>What could be causing this</span><ul><li>Most likely cause based on OBD code and sensors</li><li>Second likely cause</li><li>Third possible cause</li></ul></div><div class=\'ai-section\'><span class=\'ai-heading\'>What you should do</span><ol><li>Action 1</li><li>Action 2</li><li>Action 3</li></ol></div><div class=\'ai-section\'><span class=\'ai-heading\'>Estimated cost per repair</span><ul><li><strong>Repair name:</strong> $X-$Y parts + labor</li><li><strong>Repair name:</strong> $X-$Y parts + labor</li></ul></div><div class=\'ai-section\'><span class=\'ai-heading\'>Overall urgency</span><p>One sentence on urgency and whether safe to drive.</p></div>\n\nAlways use realistic 2024 US repair costs with dollar signs."},
+                        {"role":"system","content":"You are an expert automotive diagnostic technician in the US. Your goal is to help everyday drivers understand what is wrong with their engine and how to inspect it themselves before visiting a mechanic.\n\nIf the user's question is NOT related to engines, vehicles, or car repairs, respond ONLY with: <div class=\'ai-section\'><span class=\'ai-heading\'>Out of my lane!</span><p>That question is outside my expertise. Try: \'Is it safe to keep driving?\' or \'What could be causing this warning light?\'</p></div>\n\nIf an OBD code is provided, treat it as the PRIMARY diagnostic signal. Base your causes specifically on that code, then use sensor readings to confirm the most likely cause. Never give generic causes when a specific code is present.\n\nFor all engine/vehicle questions, respond with EXACTLY this HTML in this ORDER — no markdown, no asterisks, no extra text:\n\n<div class=\'ai-section\'><span class=\'ai-heading\'>What could be causing this</span><ul><li>Most likely cause (tied directly to OBD code or sensor readings)</li><li>Second likely cause</li><li>Third possible cause</li></ul></div>\n<div class=\'ai-section\'><span class=\'ai-heading\'>How to check this yourself</span><ol><li>Specific step — tell them exactly where to look, what to touch, what to smell or listen for. Assume they have no tools beyond a flashlight.</li><li>Second inspection step with clear plain-English instructions</li><li>Third step — what a bad result looks like vs a good result so they know what they found</li></ol></div>\n<div class=\'ai-section\'><span class=\'ai-heading\'>What to look for</span><ul><li>Specific visual sign that confirms this problem (color, texture, smell, sound)</li><li>Another warning sign</li><li>The sign that means stop driving immediately</li></ul></div>\n<div class=\'ai-section\'><span class=\'ai-heading\'>If you find the problem — estimated repair cost</span><ul><li><strong>Repair name:</strong> $X-$Y parts + labor</li><li><strong>Repair name:</strong> $X-$Y parts + labor</li></ul></div>\n<div class=\'ai-section\'><span class=\'ai-heading\'>Is it safe to drive?</span><p>One direct sentence — yes, no, or only to the nearest shop.</p></div>\n\nAlways use realistic 2024 US repair costs with dollar signs."},
                         {"role":"user","content":prompt}
                     ]
                 )
                 answer = resp.choices[0].message.content
             st.markdown(f'<div class="ai-box">{answer}</div>', unsafe_allow_html=True)
 
-            # --- YouTube Repair Videos ---
-            st.markdown('<div class="section-title" style="margin-top:1rem;">🎬 How-To Repair Videos</div>', unsafe_allow_html=True)
+            # --- Inspection Videos ---
+            st.markdown('<div class="section-title" style="margin-top:1rem;">🎬 Inspect It Yourself</div>', unsafe_allow_html=True)
             if obd_code and obd_info[0] and obd_info[0] != 'Code not found':
-                yt_fix_q = f"{obd_code.upper()} {obd_info[0]} fix repair".replace(' ', '+')
-                yt_check_q = f"how to diagnose {obd_code.upper()} {obd_info[0]}".replace(' ', '+')
+                yt_inspect_q = f"how to inspect {obd_code.upper()} {obd_info[0]} yourself".replace(' ', '+')
+                yt_signs_q = f"symptoms signs of {obd_code.upper()} {obd_info[0]}".replace(' ', '+')
+                yt_fix_q = f"{obd_code.upper()} repair fix DIY".replace(' ', '+')
                 btn_label = obd_code.upper()
             else:
-                status_terms = {0: "engine oil change routine maintenance", 1: "low oil pressure engine fix", 2: "engine overheating critical repair"}
-                yt_fix_q = status_terms[pred].replace(' ', '+')
-                yt_check_q = f"how+to+check+{status_terms[pred].replace(' ', '+')}".replace(' ', '+')
+                status_terms = {0: "engine routine inspection checklist", 1: "low oil pressure inspect yourself", 2: "engine overheating inspect causes"}
+                yt_inspect_q = status_terms[pred].replace(' ', '+')
+                yt_signs_q = f"warning signs {status_terms[pred]}".replace(' ', '+')
+                yt_fix_q = f"DIY fix {status_terms[pred]}".replace(' ', '+')
                 btn_label = status_map[pred].split()[-1]
-            yt_fix_url = f"https://www.youtube.com/results?search_query={yt_fix_q}"
-            yt_check_url = f"https://www.youtube.com/results?search_query={yt_check_q}"
             st.markdown(f"""
             <div style="background:#161b22;border:1px solid #21262d;border-radius:8px;padding:14px 16px;">
-                <div style="color:#8b949e;font-size:11px;margin-bottom:10px;">Search results matched to your diagnosis — opens YouTube in a new tab.</div>
-                <a href="{yt_fix_url}" target="_blank" style="display:inline-block;background:#1f2937;border:1px solid #374151;color:#e6edf3;font-size:12px;font-weight:500;padding:8px 14px;border-radius:6px;text-decoration:none;margin-right:8px;margin-bottom:6px;">
-                    🔧 How to Fix: {btn_label}
+                <div style="color:#8b949e;font-size:11px;margin-bottom:12px;">Use these to visually confirm your diagnosis before visiting a mechanic — opens YouTube in a new tab.</div>
+                <a href="https://www.youtube.com/results?search_query={yt_inspect_q}" target="_blank" style="display:inline-block;background:#1f2937;border:1px solid #374151;color:#e6edf3;font-size:12px;font-weight:500;padding:8px 14px;border-radius:6px;text-decoration:none;margin-right:8px;margin-bottom:8px;">
+                    🔍 How to Inspect This Yourself
                 </a>
-                <a href="{yt_check_url}" target="_blank" style="display:inline-block;background:#1f2937;border:1px solid #374151;color:#e6edf3;font-size:12px;font-weight:500;padding:8px 14px;border-radius:6px;text-decoration:none;margin-bottom:6px;">
-                    🔍 How to Diagnose &amp; Check
+                <a href="https://www.youtube.com/results?search_query={yt_signs_q}" target="_blank" style="display:inline-block;background:#1f2937;border:1px solid #374151;color:#e6edf3;font-size:12px;font-weight:500;padding:8px 14px;border-radius:6px;text-decoration:none;margin-right:8px;margin-bottom:8px;">
+                    👁️ What to Look For
+                </a>
+                <a href="https://www.youtube.com/results?search_query={yt_fix_q}" target="_blank" style="display:inline-block;background:#1f2937;border:1px solid #374151;color:#e6edf3;font-size:12px;font-weight:500;padding:8px 14px;border-radius:6px;text-decoration:none;margin-bottom:8px;">
+                    🔧 DIY Fix: {btn_label}
                 </a>
             </div>
             """, unsafe_allow_html=True)
