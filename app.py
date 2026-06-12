@@ -205,20 +205,7 @@ with st.sidebar:
                     st.session_state["est_symptoms"] = symptom_input
                     st.session_state["est_obd"] = obd_code_tab2
                     st.session_state["est_question"] = question_tab2
-                    st.success("✅ Readings estimated! Switch to the '📊 I Know My Readings' tab to review and run your diagnosis.")
-                    st.markdown(f"""
-                    <div style="background:#161b22;border:1px solid #21262d;border-radius:8px;padding:12px 14px;margin-top:8px;">
-                        <div style="color:#8b949e;font-size:11px;margin-bottom:8px;">AI estimated these sensor values from your symptoms:</div>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-                            <div style="color:#e6edf3;font-size:12px;">🔵 RPM: <strong>{st.session_state["est_rpm"]}</strong></div>
-                            <div style="color:#e6edf3;font-size:12px;">🔵 Oil Pressure: <strong>{st.session_state["est_oil"]}</strong></div>
-                            <div style="color:#e6edf3;font-size:12px;">🔵 Fuel Pressure: <strong>{st.session_state["est_fuel"]}</strong></div>
-                            <div style="color:#e6edf3;font-size:12px;">🔵 Coolant Pressure: <strong>{st.session_state["est_coolp"]}</strong></div>
-                            <div style="color:#e6edf3;font-size:12px;">🔵 Oil Temp: <strong>{st.session_state["est_oiltemp"]}°C</strong></div>
-                            <div style="color:#e6edf3;font-size:12px;">🔵 Coolant Temp: <strong>{st.session_state["est_cool"]}°C</strong></div>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    st.rerun()
                 except:
                     st.error("Could not parse sensor estimates. Please try describing your symptoms in more detail.")
         elif estimate_btn:
