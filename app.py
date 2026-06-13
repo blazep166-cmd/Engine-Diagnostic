@@ -310,32 +310,55 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-with st.expander("📖  New here? Click to learn what each sensor means"):
-    cols = st.columns(3)
-    sensors = [
-        ("Engine RPM",       "How fast the engine spins",             "600 – 2,000 rpm"),
-        ("Oil Pressure",     "Lubrication protecting engine parts",    "2.5 – 5.0"),
-        ("Fuel Pressure",    "Fuel delivery to the engine",            "5.0 – 20.0"),
-        ("Coolant Pressure", "Pressure in the cooling system",         "1.5 – 4.0"),
-        ("Oil Temp",         "Temperature of the engine oil",          "70 – 90°C"),
-        ("Coolant Temp",     "Temperature of the cooling fluid",       "70 – 90°C"),
-    ]
-    for i, (name, desc, normal) in enumerate(sensors):
-        with cols[i % 3]:
-            st.markdown(f"""
-            <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px 14px;margin-bottom:8px;">
-                <div style="color:#e6edf3;font-size:12px;font-weight:600;margin-bottom:4px;">{name}</div>
-                <div style="color:#c9d1d9;font-size:12px;line-height:1.5;">{desc}</div>
-                <div style="color:#4ade80;font-size:11px;font-weight:500;margin-top:8px;">✓ Normal range: {normal}</div>
-            </div>""", unsafe_allow_html=True)
+if not st.session_state.get("has_result"):
+    st.markdown("""
+    <div style="background:#0f1f2a;border:1px solid #1d4e6e;border-radius:10px;padding:18px 20px;margin-bottom:1.2rem;">
+        <div style="color:#58a6ff;font-size:15px;font-weight:600;margin-bottom:6px;">👋 Welcome to OBDintell</div>
+        <div style="color:#c9d1d9;font-size:13px;line-height:1.6;">
+            Use the sliders on the left to enter your engine's sensor readings — check your dashboard or a basic OBD scanner.
+            Don't have those numbers? Switch to the <strong style="color:#e6edf3;">"I Don't Know My Readings"</strong> tab and describe what's happening instead.
+            <br><br>
+            Once you're ready, click <strong style="color:#4ade80;">Run Diagnosis</strong> to get your results.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-col_results, col_charts = st.columns([1, 1.3], gap="large")
+    with st.expander("📖  New here? Click to learn what each sensor means"):
+        cols = st.columns(3)
+        sensors = [
+            ("Engine RPM",       "How fast the engine spins",             "600 – 2,000 rpm"),
+            ("Oil Pressure",     "Lubrication protecting engine parts",    "2.5 – 5.0"),
+            ("Fuel Pressure",    "Fuel delivery to the engine",            "5.0 – 20.0"),
+            ("Coolant Pressure", "Pressure in the cooling system",         "1.5 – 4.0"),
+            ("Oil Temp",         "Temperature of the engine oil",          "70 – 90°C"),
+            ("Coolant Temp",     "Temperature of the cooling fluid",       "70 – 90°C"),
+        ]
+        for i, (name, desc, normal) in enumerate(sensors):
+            with cols[i % 3]:
+                st.markdown(f"""
+                <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px 14px;margin-bottom:8px;">
+                    <div style="color:#e6edf3;font-size:12px;font-weight:600;margin-bottom:4px;">{name}</div>
+                    <div style="color:#c9d1d9;font-size:12px;line-height:1.5;">{desc}</div>
+                    <div style="color:#4ade80;font-size:11px;font-weight:500;margin-top:8px;">✓ Normal range: {normal}</div>
+                </div>""", unsafe_allow_html=True)
 
-st.markdown("""
-<div style="text-align:center;padding:6px 0 2px;margin-bottom:4px;">
-    <span style="color:#8b949e;font-size:11px;letter-spacing:0.05em;">↓ &nbsp; Results appear below — scroll down after running a diagnosis &nbsp; ↓</span>
-</div>
-""", unsafe_allow_html=True)
+    st.markdown("""
+    <div style="text-align:center;padding:6px 0 2px;margin-bottom:4px;">
+        <span style="color:#8b949e;font-size:11px;letter-spacing:0.05em;">↓ &nbsp; Results appear below — scroll down after running a diagnosis &nbsp; ↓</span>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown("""
+    <div style="background:#0f2a1a;border:1px solid #166534;border-radius:10px;padding:14px 20px;margin-bottom:1.2rem;">
+        <div style="color:#4ade80;font-size:13px;font-weight:600;">✅ Diagnosis complete — results below</div>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("🔄 Diagnose Another Vehicle", use_container_width=True):
+        st.session_state["has_result"] = False
+        st.session_state["last_answer"] = None
+        st.session_state["last_maint"] = None
+        st.session_state["ai_estimated"] = False
+        st.rerun()
 
 col_results, col_charts = st.columns([1, 1.3], gap="large")
 
