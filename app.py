@@ -24,9 +24,9 @@ section[data-testid="stSidebar"] { background: #010409 !important; border-right:
 .status-critical { background:#2a0a0a; color:#f87171; border:1px solid #991b1b; padding:1rem 1.4rem; border-radius:10px; font-size:1.3rem; font-weight:700; margin-bottom:1rem; }
 .metric-grid { display:flex; gap:10px; margin-bottom:1rem; }
 .metric-card { flex:1; background:#161b22; border:1px solid #21262d; border-radius:8px; padding:12px 14px; }
-.metric-label { font-size:10px; color:#484f58; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px; }
+.metric-label { font-size:10px; color:#8b949e; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px; }
 .metric-value { font-size:20px; font-weight:500; color:#e6edf3; }
-.section-title { font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:#484f58; border-bottom:1px solid #21262d; padding-bottom:6px; margin:1rem 0 0.8rem; }
+.section-title { font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:#c9d1d9; border-bottom:1px solid #21262d; padding-bottom:6px; margin:1rem 0 0.8rem; }
 .obd-found { background:#0f1f2a; border:1px solid #1d4e6e; border-radius:8px; padding:0.8rem 1rem; color:#58a6ff; font-size:0.88rem; margin-top:0.5rem; }
 .ai-box { background:#161b22; border:1px solid #21262d; border-radius:8px; padding:0.2rem 0.5rem; color:#c9d1d9; font-size:0.9rem; line-height:1.75; margin-top:0.5rem; }
 .ai-section { border-left:3px solid #58a6ff; padding:0.7rem 1rem; margin:0.6rem 0; border-radius:0 6px 6px 0; background:#0d1117; }
@@ -38,7 +38,7 @@ section[data-testid="stSidebar"] { background: #010409 !important; border-right:
 .hist-row { display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid #21262d; font-size:11px; }
 .hist-row:last-child { border-bottom:none; }
 .normal-range { font-size:10px; color:#4ade80; background:#0f2a1a; border:1px solid #166534; padding:1px 7px; border-radius:4px; margin-left:6px; }
-.sensor-tip { font-size:11px; color:#8b949e; margin-top:2px; margin-bottom:10px; line-height:1.5; }
+.sensor-tip { font-size:12px; color:#c9d1d9; margin-top:2px; margin-bottom:10px; line-height:1.5; }
 .slider-val { font-size:16px; font-weight:500; color:#e6edf3; margin-bottom:4px; }
 div[data-testid="stButton"] > button { background:#238636 !important; color:white !important; border:none !important; font-weight:600 !important; font-size:14px !important; padding:0.6rem 1.5rem !important; border-radius:6px !important; width:100% !important; }
 .stSlider > div > div > div { background:#238636 !important; }
@@ -108,6 +108,27 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
+    # Demo Mode
+    st.markdown('<div class="section-title">Quick Demo</div>', unsafe_allow_html=True)
+    if st.button("🎬 See a Critical Engine Diagnosis", use_container_width=True):
+        st.session_state["est_rpm"] = 450
+        st.session_state["est_oil"] = 0.8
+        st.session_state["est_fuel"] = 3.2
+        st.session_state["est_coolp"] = 0.6
+        st.session_state["est_oiltemp"] = 112.0
+        st.session_state["est_cool"] = 142.0
+        st.session_state["ai_estimated"] = True
+        st.session_state["demo_obd"] = "P0217"
+        st.session_state["demo_question"] = "Is it safe to keep driving? What is wrong with my engine?"
+        st.session_state["demo_mode"] = True
+        # Clear any previous results so it reruns fresh
+        st.session_state["has_result"] = False
+        st.session_state["last_answer"] = None
+        st.session_state["last_maint"] = None
+        st.rerun()
+
+    st.markdown('<div style="color:#8b949e;font-size:10px;margin-top:-8px;margin-bottom:8px;text-align:center;">No sensor readings? Try the demo to see the full experience.</div>', unsafe_allow_html=True)
+
     # Default values — overridden by whichever tab is active
     rpm = st.session_state.get("est_rpm", 800)
     oil = st.session_state.get("est_oil", 3.3)
@@ -161,11 +182,11 @@ with st.sidebar:
         st.markdown('<div class="sensor-tip">Check engine light on? A $20 OBD scanner from AutoZone gives you the code. No scanner? Leave blank — the AI still works without it.</div>', unsafe_allow_html=True)
         obd_code = st.text_input("obd", placeholder="e.g. P0301", label_visibility="collapsed")
 
-        st.markdown('<div class="section-title">Describe Symptoms <span style="color:#484f58;font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Describe Symptoms <span style="color:#8b949e;font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></div>', unsafe_allow_html=True)
         st.markdown('<div class="sensor-tip">Describe what you notice — unusual sounds, smells, vibrations, or when the problem happens.</div>', unsafe_allow_html=True)
         symptoms = st.text_area("symptoms", placeholder="e.g. Engine makes a knocking sound at high RPM, smells like burning oil", height=75, label_visibility="collapsed")
 
-        st.markdown('<div class="section-title">Ask the AI <span style="color:#484f58;font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Ask the AI <span style="color:#8b949e;font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></div>', unsafe_allow_html=True)
         question = st.text_area("q", placeholder="e.g. Is it safe to keep driving? What is wrong with my engine?", height=75, label_visibility="collapsed")
 
     with tab2:
@@ -175,11 +196,11 @@ with st.sidebar:
             placeholder="e.g. My car shakes at highway speed, smells like burning oil, and the temperature gauge is higher than usual. The check engine light came on yesterday.",
             height=130, label_visibility="collapsed")
 
-        st.markdown('<div class="section-title" style="margin-top:1rem;">OBD Code <span style="color:#484f58;font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title" style="margin-top:1rem;">OBD Code <span style="color:#8b949e;font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></div>', unsafe_allow_html=True)
         st.markdown('<div class="sensor-tip">If you have a code, enter it here — it makes the estimate more accurate.</div>', unsafe_allow_html=True)
         obd_code_tab2 = st.text_input("obd2", placeholder="e.g. P0301", label_visibility="collapsed")
 
-        st.markdown('<div class="section-title" style="margin-top:1rem;">Ask the AI <span style="color:#484f58;font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title" style="margin-top:1rem;">Ask the AI <span style="color:#8b949e;font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></div>', unsafe_allow_html=True)
         question_tab2 = st.text_area("q2", placeholder="e.g. Is it safe to keep driving?", height=75, label_visibility="collapsed")
 
         estimate_btn = st.button("⚡ Estimate My Readings", use_container_width=True)
@@ -265,7 +286,15 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    run = st.button("Run Diagnosis")
+    run = st.button("Run Diagnosis", use_container_width=True)
+
+    # Demo mode — override obd and question and auto-trigger
+    if st.session_state.get("demo_mode"):
+        obd_code = st.session_state.get("demo_obd", "P0217")
+        question = st.session_state.get("demo_question", "Is it safe to keep driving?")
+        symptoms = "Engine shaking badly, burning smell, temperature gauge in the red."
+        run = True
+        st.session_state["demo_mode"] = False
 
 # ── MAIN ───────────────────────────────────────────────────────────
 st.markdown("""
@@ -275,7 +304,7 @@ st.markdown("""
         <span style="color:#e6edf3;font-size:17px;font-weight:600;">Engine AI Diagnostic</span>
     </div>
     <div style="display:flex;gap:10px;align-items:center;">
-        <span style="color:#484f58;font-size:11px;">Trained on 19,535 real readings</span>
+        <span style="color:#8b949e;font-size:11px;">Trained on 19,535 real readings</span>
         <span style="background:#1f6feb22;color:#58a6ff;border:1px solid #1f6feb55;font-size:11px;padding:3px 10px;border-radius:20px;">3,619 OBD codes</span>
     </div>
 </div>
@@ -304,7 +333,7 @@ col_results, col_charts = st.columns([1, 1.3], gap="large")
 
 st.markdown("""
 <div style="text-align:center;padding:6px 0 2px;margin-bottom:4px;">
-    <span style="color:#484f58;font-size:11px;letter-spacing:0.05em;">↓ &nbsp; Results appear below — scroll down after running a diagnosis &nbsp; ↓</span>
+    <span style="color:#8b949e;font-size:11px;letter-spacing:0.05em;">↓ &nbsp; Results appear below — scroll down after running a diagnosis &nbsp; ↓</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -448,7 +477,7 @@ Recommended Action:
 ============================
 Generated by Engine AI Diagnostic"""
 
-        if question:
+        if question or st.session_state.get("last_answer"):
             st.markdown('<div class="section-title">AI Diagnosis</div>', unsafe_allow_html=True)
             with st.spinner("Thinking..."):
                 obd_info = (None, None)
@@ -478,12 +507,27 @@ Use realistic 2024 US repair costs:
                 resp = client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[
-                        {"role":"system","content":"You are an expert automotive diagnostic technician in the US. Your goal is to help everyday drivers understand what is wrong with their engine and how to inspect it themselves before visiting a mechanic.\n\nIf the user's question is NOT related to engines, vehicles, or car repairs, respond ONLY with: <div class=\'ai-section\'><span class=\'ai-heading\'>Out of my lane!</span><p>That question is outside my expertise. Try: \'Is it safe to keep driving?\' or \'What could be causing this warning light?\'</p></div>\n\nIf an OBD code is provided, treat it as the PRIMARY diagnostic signal. Base your causes specifically on that code, then use sensor readings to confirm the most likely cause. Never give generic causes when a specific code is present.\n\nFor all engine/vehicle questions, respond with EXACTLY this HTML in this ORDER — no markdown, no asterisks, no extra text:\n\n<div class=\'ai-section\'><span class=\'ai-heading\'>What could be causing this</span><ul><li>Most likely cause (tied directly to OBD code or sensor readings)</li><li>Second likely cause</li><li>Third possible cause</li></ul></div>\n<div class=\'ai-section\'><span class=\'ai-heading\'>How to check this yourself</span><ol><li>Specific step — tell them exactly where to look, what to touch, what to smell or listen for. Assume they have no tools beyond a flashlight.</li><li>Second inspection step with clear plain-English instructions</li><li>Third step — what a bad result looks like vs a good result so they know what they found</li></ol></div>\n<div class=\'ai-section\'><span class=\'ai-heading\'>What to look for</span><ul><li>Specific visual sign that confirms this problem (color, texture, smell, sound)</li><li>Another warning sign</li><li>The sign that means stop driving immediately</li></ul></div>\n<div class=\'ai-section\'><span class=\'ai-heading\'>If you find the problem — estimated repair cost</span><ul><li><strong>Repair name:</strong> $X-$Y parts + labor</li><li><strong>Repair name:</strong> $X-$Y parts + labor</li></ul></div>\n<div class=\'ai-section\'><span class=\'ai-heading\'>Is it safe to drive?</span><p>One direct sentence — yes, no, or only to the nearest shop.</p></div>\n\nAlways use realistic 2024 US repair costs with dollar signs."},
+                        {"role":"system","content":"You are an expert automotive diagnostic technician in the US. Help everyday drivers understand what is wrong and how to inspect it themselves.\n\nIf the question is NOT engine/vehicle related, respond ONLY with: <div class=\'ai-section\'><span class=\'ai-heading\'>Out of my lane!</span><p>I only handle engine diagnostics. Try: \'Is it safe to keep driving?\'</p></div>\n\nIf an OBD code is provided, it is the PRIMARY signal — list its specific causes first, then confirm with sensor readings.\n\nRespond with EXACTLY this HTML in ORDER — no markdown:\n<div class=\'ai-section\'><span class=\'ai-heading\'>What could be causing this</span><ul><li>Most likely cause</li><li>Second cause</li><li>Third cause</li></ul></div><div class=\'ai-section\'><span class=\'ai-heading\'>How to check this yourself</span><ol><li>Step with exact location and what to look/smell/touch</li><li>Second step</li><li>What bad vs good looks like</li></ol></div><div class=\'ai-section\'><span class=\'ai-heading\'>What to look for</span><ul><li>Specific visual/smell/sound sign</li><li>Another warning sign</li><li>Sign that means stop driving immediately</li></ul></div><div class=\'ai-section\'><span class=\'ai-heading\'>If you find the problem — estimated repair cost</span><ul><li><strong>Repair:</strong> $X-$Y parts + labor</li><li><strong>Repair:</strong> $X-$Y parts + labor</li></ul></div><div class=\'ai-section\'><span class=\'ai-heading\'>Is it safe to drive?</span><p>One direct sentence.</p></div>\n\nAlways use realistic 2024 US repair costs."},
                         {"role":"user","content":prompt}
                     ]
                 )
                 answer = resp.choices[0].message.content
-            st.markdown(f'<div class="ai-box">{answer}</div>', unsafe_allow_html=True)
+                st.session_state["last_answer"] = answer
+                maint_prompt_cache = (f"Engine readings: RPM={rpm}, Oil={oil}, OilTemp={oiltemp}C, CoolantTemp={cool}C, Fuel={fuel}, CoolantPressure={coolp}. Status: {status_map[pred]}. "
+                    "Generate a 30/60/90 day maintenance schedule using exactly this HTML — no markdown:\n"
+                    "<div class=\'ai-section\'><span class=\'ai-heading\'>Next 30 Days</span><ul><li>task with cost</li></ul></div>"
+                    "<div class=\'ai-section\'><span class=\'ai-heading\'>Next 60 Days</span><ul><li>task with cost</li></ul></div>"
+                    "<div class=\'ai-section\'><span class=\'ai-heading\'>Next 90 Days</span><ul><li>task with cost</li></ul></div>"
+                    "Use realistic 2024 US prices.")
+                maint_resp = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role":"system","content":"You are an automotive maintenance advisor. Only respond with the exact HTML structure requested."},
+                              {"role":"user","content":maint_prompt_cache}]
+                )
+                st.session_state["last_maint"] = maint_resp.choices[0].message.content
+            # Display cached results
+            if st.session_state.get("last_answer"):
+                answer = st.session_state["last_answer"]
 
             # --- Inspection Videos ---
             st.markdown('<div class="section-title" style="margin-top:1rem;">🎬 Inspect It Yourself</div>', unsafe_allow_html=True)
@@ -513,21 +557,8 @@ Use realistic 2024 US repair costs:
             </div>
             """, unsafe_allow_html=True)
             st.markdown('<div class="section-title" style="margin-top:1rem;">Maintenance Schedule</div>', unsafe_allow_html=True)
-            with st.spinner("Generating your personalized maintenance plan..."):
-                maint_prompt = f"""Based on these engine readings: RPM={rpm}, Oil Pressure={oil}, Oil Temp={oiltemp}C, Coolant Temp={cool}C, Fuel Pressure={fuel}, Coolant Pressure={coolp}. Status: {status_map[pred]}.
-
-Generate a maintenance schedule in exactly this HTML format — no markdown, no asterisks:
-<div class='ai-section'><span class='ai-heading'>Next 30 Days</span><ul><li>task with estimated cost</li></ul></div>
-<div class='ai-section'><span class='ai-heading'>Next 60 Days</span><ul><li>task with estimated cost</li></ul></div>
-<div class='ai-section'><span class='ai-heading'>Next 90 Days</span><ul><li>task with estimated cost</li></ul></div>
-Be specific to the readings. Use realistic 2024 US prices."""
-                maint_resp = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[{"role":"system","content":"You are an expert automotive maintenance advisor. Only respond with the exact HTML structure requested."},
-                              {"role":"user","content":maint_prompt}]
-                )
-                maint_answer = maint_resp.choices[0].message.content
-            st.markdown(f'<div class="ai-box">{maint_answer}</div>', unsafe_allow_html=True)
+            if st.session_state.get("last_maint"):
+                st.markdown(f'<div class="ai-box">{st.session_state["last_maint"]}</div>', unsafe_allow_html=True)
 
             # --- FEATURE 2b: Severity Timeline ---
             if pred > 0:
@@ -581,7 +612,7 @@ Be specific to the readings. Use realistic 2024 US prices."""
         <div style="background:#161b22;border:1px solid #21262d;border-radius:10px;padding:2rem;text-align:center;margin-top:1rem;">
             <div style="font-size:2rem;margin-bottom:0.8rem;">🔧</div>
             <div style="color:#e6edf3;font-size:15px;font-weight:500;margin-bottom:0.5rem;">Ready to Diagnose</div>
-            <div style="color:#484f58;font-size:13px;">Set your sensor readings on the left<br>and click Run Diagnosis</div>
+            <div style="color:#8b949e;font-size:13px;">Set your sensor readings on the left<br>and click Run Diagnosis</div>
         </div>""", unsafe_allow_html=True)
 
 with col_charts:
@@ -633,4 +664,4 @@ if st.session_state.history:
         st.session_state.history = []
         st.rerun()
 else:
-    st.markdown('<div style="color:#484f58;font-size:13px;padding:0.5rem 0;">No diagnoses yet — run one to see history here.</div>', unsafe_allow_html=True)
+    st.markdown('<div style="color:#8b949e;font-size:13px;padding:0.5rem 0;">No diagnoses yet — run one to see history here.</div>', unsafe_allow_html=True)
