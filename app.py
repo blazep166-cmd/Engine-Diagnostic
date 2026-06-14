@@ -62,6 +62,9 @@ client = OpenAI(api_key=api_key)
 if 'history' not in st.session_state:
     st.session_state.history = []
 
+if 'screen' not in st.session_state:
+    st.session_state.screen = 'welcome'
+
 # Dataset averages baked in from 19,535 real readings
 DATASET_STATS = {
     'rpm':     {'healthy_avg': 939,  'min': 150,  'max': 1299},
@@ -297,6 +300,39 @@ with st.sidebar:
         st.session_state["demo_mode"] = False
 
 # ── MAIN ───────────────────────────────────────────────────────────
+
+# Handle Run Diagnosis click — compute and store, then switch to results screen
+if run:
+    reading = pd.DataFrame([[rpm,oil,fuel,coolp,oiltemp,cool]], columns=features)
+    pred    = model.predict(reading)[0]
+    proba   = model.predict_proba(reading)[0]
+    while len(proba) < 3:
+        proba = list(proba) + [0.0]
+    st.session_state["last_pred"] = int(pred)
+    st.session_state["last_proba"] = [float(p) for p in proba]
+    st.session_state["last_rpm"] = rpm
+    st.session_state["last_oil"] = oil
+    st.session_state["last_fuel"] = fuel
+    st.session_state["last_coolp"] = coolp
+    st.session_state["last_oiltemp"] = oiltemp
+    st.session_state["last_cool"] = cool
+    st.session_state["last_obd"] = obd_code
+    st.session_state["last_symptoms"] = symptoms
+    st.session_state["last_question"] = question
+    st.session_state["has_result"] = True
+    st.session_state.screen = 'results'
+
+    _status_map = {0:'🟢  HEALTHY', 1:'🟡  AT RISK', 2:'🔴  CRITICAL'}
+    st.session_state.history.append({
+        'time':    datetime.datetime.now().strftime('%H:%M:%S'),
+        'status':  _status_map[int(pred)],
+        'rpm':     rpm, 'coolant': cool,
+        'oil':     oil, 'fuel':    fuel,
+        'cost':    cost_map[int(pred)]['range'],
+        'obd':     obd_code.upper() if obd_code else '—'
+    })
+
+    st.rerun()
 st.markdown("""
 <div style="display:flex;align-items:center;justify-content:space-between;padding:0 0 1.2rem 0;margin-bottom:1.2rem;border-bottom:1px solid #21262d;">
     <div style="display:flex;align-items:center;gap:12px;">
@@ -310,12 +346,32 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-if not st.session_state.get("has_result"):
+# ── SCREEN: WELCOME ──────────────────────────────────────────────
+if st.session_state.screen == 'welcome':
+    st.markdown("""
+    <div style="background:#0f1f2a;border:1px solid #1d4e6e;border-radius:12px;padding:40px 32px;margin:2rem auto;max-width:600px;text-align:center;">
+        <div style="font-size:40px;margin-bottom:12px;">🔧</div>
+        <div style="color:#58a6ff;font-size:22px;font-weight:700;margin-bottom:12px;">Welcome to OBDintell</div>
+        <div style="color:#c9d1d9;font-size:14px;line-height:1.7;">
+            Get an instant AI-powered diagnosis of your engine using sensor readings or a simple description of what's wrong.
+            <br><br>
+            No mechanic visit required to find out what's going on.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    col_a, col_b, col_c = st.columns([1,1,1])
+    with col_b:
+        if st.button("Get Started →", use_container_width=True):
+            st.session_state.screen = 'input'
+            st.rerun()
+
+# ── SCREEN: INPUT ────────────────────────────────────────────────
+elif st.session_state.screen == 'input':
     st.markdown("""
     <div style="background:#0f1f2a;border:1px solid #1d4e6e;border-radius:10px;padding:18px 20px;margin-bottom:1.2rem;">
-        <div style="color:#58a6ff;font-size:15px;font-weight:600;margin-bottom:6px;">👋 Welcome to OBDintell</div>
+        <div style="color:#58a6ff;font-size:15px;font-weight:600;margin-bottom:6px;">Set Your Sensor Readings</div>
         <div style="color:#c9d1d9;font-size:13px;line-height:1.6;">
-            Use the sliders on the left to enter your engine's sensor readings — check your dashboard or a basic OBD scanner.
+            Use the sliders on the left to enter your engine's readings — check your dashboard or a basic OBD scanner.
             Don't have those numbers? Switch to the <strong style="color:#e6edf3;">"I Don't Know My Readings"</strong> tab and describe what's happening instead.
             <br><br>
             Once you're ready, click <strong style="color:#4ade80;">Run Diagnosis</strong> to get your results.
@@ -344,335 +400,301 @@ if not st.session_state.get("has_result"):
 
     st.markdown("""
     <div style="text-align:center;padding:6px 0 2px;margin-bottom:4px;">
-        <span style="color:#8b949e;font-size:11px;letter-spacing:0.05em;">↓ &nbsp; Results appear below — scroll down after running a diagnosis &nbsp; ↓</span>
+        <span style="color:#8b949e;font-size:11px;letter-spacing:0.05em;">↑ &nbsp; Click Run Diagnosis in the sidebar when you're ready &nbsp; ↑</span>
     </div>
     """, unsafe_allow_html=True)
-else:
+
+# ── SCREEN: RESULTS ──────────────────────────────────────────────
+if st.session_state.screen == 'results':
     st.markdown("""
     <div style="background:#0f2a1a;border:1px solid #166534;border-radius:10px;padding:14px 20px;margin-bottom:1.2rem;">
-        <div style="color:#4ade80;font-size:13px;font-weight:600;">✅ Diagnosis complete — results below</div>
+        <div style="color:#4ade80;font-size:13px;font-weight:600;">✅ Diagnosis complete</div>
     </div>
     """, unsafe_allow_html=True)
-    if st.button("🔄 Diagnose Another Vehicle", use_container_width=True):
-        st.session_state["has_result"] = False
-        st.session_state["last_answer"] = None
-        st.session_state["last_maint"] = None
-        st.session_state["ai_estimated"] = False
-        st.rerun()
 
-col_results, col_charts = st.columns([1, 1.3], gap="large")
+    col_results, col_charts = st.columns([1, 1.3], gap="large")
 
-with col_results:
-    if run:
-        reading = pd.DataFrame([[rpm,oil,fuel,coolp,oiltemp,cool]], columns=features)
-        pred    = model.predict(reading)[0]
-        proba   = model.predict_proba(reading)[0]
-        while len(proba) < 3:
-            proba = list(proba) + [0.0]
-        # Lock results into session state
-        st.session_state["last_pred"] = int(pred)
-        st.session_state["last_proba"] = [float(p) for p in proba]
-        st.session_state["last_rpm"] = rpm
-        st.session_state["last_oil"] = oil
-        st.session_state["last_fuel"] = fuel
-        st.session_state["last_coolp"] = coolp
-        st.session_state["last_oiltemp"] = oiltemp
-        st.session_state["last_cool"] = cool
-        st.session_state["last_obd"] = obd_code
-        st.session_state["last_symptoms"] = symptoms
-        st.session_state["last_question"] = question
-        st.session_state["has_result"] = True
+    with col_results:
+        if st.session_state.get("has_result"):
+            pred    = st.session_state["last_pred"]
+            proba   = st.session_state["last_proba"]
+            rpm     = st.session_state["last_rpm"]
+            oil     = st.session_state["last_oil"]
+            fuel    = st.session_state["last_fuel"]
+            coolp   = st.session_state["last_coolp"]
+            oiltemp = st.session_state["last_oiltemp"]
+            cool    = st.session_state["last_cool"]
+            obd_code = st.session_state["last_obd"]
+            symptoms = st.session_state["last_symptoms"]
+            question = st.session_state["last_question"]
 
-    if st.session_state.get("has_result"):
-        pred    = st.session_state["last_pred"]
-        proba   = st.session_state["last_proba"]
-        rpm     = st.session_state["last_rpm"]
-        oil     = st.session_state["last_oil"]
-        fuel    = st.session_state["last_fuel"]
-        coolp   = st.session_state["last_coolp"]
-        oiltemp = st.session_state["last_oiltemp"]
-        cool    = st.session_state["last_cool"]
-        obd_code = st.session_state["last_obd"]
-        symptoms = st.session_state["last_symptoms"]
-        question = st.session_state["last_question"]
+            status_map = {0:'🟢  HEALTHY', 1:'🟡  AT RISK', 2:'🔴  CRITICAL'}
+            class_map  = {0:'status-healthy', 1:'status-atrisk', 2:'status-critical'}
+            action_map = {
+                0: 'No immediate action needed. Keep up regular maintenance.',
+                1: 'Schedule an inspection within 1–2 weeks. Monitor your sensors closely.',
+                2: 'Stop driving immediately. Continuing risks serious and expensive engine damage.'
+            }
 
-        status_map = {0:'🟢  HEALTHY', 1:'🟡  AT RISK', 2:'🔴  CRITICAL'}
-        class_map  = {0:'status-healthy', 1:'status-atrisk', 2:'status-critical'}
-        action_map = {
-            0: 'No immediate action needed. Keep up regular maintenance.',
-            1: 'Schedule an inspection within 1–2 weeks. Monitor your sensors closely.',
-            2: 'Stop driving immediately. Continuing risks serious and expensive engine damage.'
-        }
-
-        st.markdown(f'<div class="{class_map[pred]}">{status_map[pred]}</div>', unsafe_allow_html=True)
-        st.markdown(f"""
-        <div class="metric-grid">
-            <div class="metric-card">
-                <div class="metric-label">Est. Repair Cost</div>
-                <div class="metric-value">{cost_map[pred]["range"]}</div>
-                <div style="font-size:10px;color:#484f58;margin-top:4px;">{cost_map[pred]["detail"]}</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-label">Model Confidence</div>
-                <div class="metric-value">{max(proba):.0%}</div>
-                <div style="font-size:10px;color:#484f58;margin-top:4px;">Based on 19,535 real readings</div>
-            </div>
-        </div>""", unsafe_allow_html=True)
-        st.info(action_map[pred])
-
-        st.markdown('<div class="section-title">Prediction Breakdown</div>', unsafe_allow_html=True)
-        for lbl, p in zip(['Healthy','At Risk','Critical'], proba):
-            st.progress(float(p), text=f"{lbl}  {p:.0%}")
-
-        # --- FEATURE 1: Compare to Dataset ---
-        st.markdown('<div class="section-title">How Your Engine Compares</div>', unsafe_allow_html=True)
-        sensor_labels = {'rpm':'Engine RPM','oil':'Oil Pressure','fuel':'Fuel Pressure','coolp':'Coolant Pressure','oiltemp':'Oil Temp °C','cool':'Coolant Temp °C'}
-        user_vals = {'rpm':rpm,'oil':oil,'fuel':fuel,'coolp':coolp,'oiltemp':oiltemp,'cool':cool}
-        sensor_flags = {}
-        compare_rows = ""
-        for key, label in sensor_labels.items():
-            uv = user_vals[key]
-            avg = DATASET_STATS[key]['healthy_avg']
-            diff = uv - avg
-            pct = (diff / avg) * 100
-            if abs(pct) < 10:
-                icon = "🟢"; color = "#4ade80"; note = "Within normal range"
-                sensor_flags[key] = 'ok'
-            elif abs(pct) < 25:
-                icon = "🟡"; color = "#fbbf24"; note = f"{'Above' if diff>0 else 'Below'} average by {abs(pct):.0f}%"
-                sensor_flags[key] = 'warn'
-            else:
-                icon = "🔴"; color = "#f87171"; note = f"{'Above' if diff>0 else 'Below'} average by {abs(pct):.0f}%"
-                sensor_flags[key] = 'bad'
-            bar_pct = min(100, max(0, (uv / (DATASET_STATS[key]['max'] or 1)) * 100))
-            compare_rows += f"""
-            <div style="margin-bottom:10px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
-                    <span style="color:#e6edf3;font-size:12px;">{icon} {label}</span>
-                    <span style="color:{color};font-size:11px;">{note}</span>
-                </div>
-                <div style="background:#21262d;border-radius:4px;height:6px;width:100%;">
-                    <div style="background:{color};height:6px;border-radius:4px;width:{bar_pct:.0f}%;"></div>
-                </div>
-                <div style="display:flex;justify-content:space-between;font-size:10px;color:#484f58;margin-top:2px;">
-                    <span>Your reading: {uv}</span><span>Healthy avg: {avg}</span>
-                </div>
-            </div>"""
-        st.markdown(f'<div style="background:#161b22;border:1px solid #21262d;border-radius:8px;padding:14px 16px;">{compare_rows}</div>', unsafe_allow_html=True)
-
-        # --- FEATURE 1b: Sensor Confidence Breakdown ---
-        bad_sensors = [sensor_labels[k] for k,v in sensor_flags.items() if v == 'bad']
-        warn_sensors = [sensor_labels[k] for k,v in sensor_flags.items() if v == 'warn']
-        if bad_sensors or warn_sensors:
-            flag_html = ""
-            if bad_sensors:
-                flag_html += f'<div style="color:#f87171;font-size:12px;margin-bottom:4px;">⚠️ Critical sensors: {", ".join(bad_sensors)}</div>'
-            if warn_sensors:
-                flag_html += f'<div style="color:#fbbf24;font-size:12px;">⚡ Watch these: {", ".join(warn_sensors)}</div>'
-            st.markdown(f'<div style="background:#161b22;border:1px solid #21262d;border-radius:8px;padding:10px 14px;margin-top:8px;">{flag_html}</div>', unsafe_allow_html=True)
-
-        if obd_code:
-            st.markdown('<div class="section-title">OBD Code Lookup</div>', unsafe_allow_html=True)
-            desc, system = get_code_description(obd_code)
-            if desc != 'Code not found':
-                st.markdown(f'<div class="obd-found"><strong>{obd_code.upper()}</strong> — {desc}<br><span style="opacity:0.6;font-size:11px;">System: {system}</span></div>', unsafe_allow_html=True)
-            else:
-                st.warning(f"{obd_code.upper()} not found in the library.")
-
-        result_text = f"""ENGINE AI DIAGNOSTIC RESULT
-============================
-Date       : {datetime.datetime.now().strftime("%Y-%m-%d %H:%M")}
-Status     : {status_map[pred]}
-Est. Cost  : {cost_map[pred]["range"]}
-Confidence : {max(proba):.0%}
-
-Sensor Readings:
-  Engine RPM       : {rpm} rpm
-  Oil Pressure     : {oil}
-  Fuel Pressure    : {fuel}
-  Coolant Pressure : {coolp}
-  Oil Temp         : {oiltemp}°C
-  Coolant Temp     : {cool}°C
-  OBD Code         : {obd_code.upper() if obd_code else "None"}
-
-Recommended Action:
-  {action_map[pred]}
-============================
-Generated by Engine AI Diagnostic"""
-
-        if question or st.session_state.get("last_answer"):
-            st.markdown('<div class="section-title">AI Diagnosis</div>', unsafe_allow_html=True)
-
-            if run:
-                with st.spinner("Thinking..."):
-                    obd_info = (None, None)
-                    if obd_code:
-                        obd_info = get_code_description(obd_code)
-                    if obd_code and obd_info[0] and obd_info[0] != 'Code not found':
-                        obd_section = (f"IMPORTANT: OBD code {obd_code.upper()} — {obd_info[0]} (System: {obd_info[1]}). "
-                                      "This is the PRIMARY basis. List its direct causes first, then cross-reference sensor readings.")
-                    else:
-                        obd_section = "No OBD code. Base diagnosis on sensor readings and symptoms."
-                    prompt = (f"Engine: RPM={rpm}, Oil={oil}, Fuel={fuel}, CoolantP={coolp}, OilTemp={oiltemp}C, CoolantTemp={cool}C. "
-                              f"Status: {status_map[pred]}. {obd_section} "
-                              f"Symptoms: {symptoms or 'None'}. Question: {question} "
-                              f"Costs: oil $50-150, sensor $100-350, thermostat $150-300, water pump $300-700, "
-                              f"fuel pump $400-900, oil pump $500-1200, head gasket $1500-3000, rebuild $2500-5000+.")
-                    resp = client.chat.completions.create(
-                        model="gpt-4o-mini",
-                        messages=[
-                            {"role":"system","content":("You are an expert automotive diagnostic technician. Help drivers inspect issues themselves before visiting a mechanic.\n\n"
-                                "If NOT engine/vehicle related, respond ONLY with: <div class='ai-section'><span class='ai-heading'>Out of my lane!</span><p>I only handle engine diagnostics.</p></div>\n\n"
-                                "If OBD code provided, it is PRIMARY — list that code's specific causes first, confirm with sensors.\n\n"
-                                "Respond with EXACTLY this HTML in ORDER:\n"
-                                "<div class='ai-section'><span class='ai-heading'>What could be causing this</span><ul><li>Most likely cause</li><li>Second cause</li><li>Third cause</li></ul></div>"
-                                "<div class='ai-section'><span class='ai-heading'>How to check this yourself</span><ol><li>Exact step — where to look, what to touch/smell/hear</li><li>Second step</li><li>What bad vs good looks like</li></ol></div>"
-                                "<div class='ai-section'><span class='ai-heading'>What to look for</span><ul><li>Visual/smell/sound sign</li><li>Another warning sign</li><li>Sign meaning stop driving immediately</li></ul></div>"
-                                "<div class='ai-section'><span class='ai-heading'>If you find the problem — estimated repair cost</span><ul><li><strong>Repair:</strong> $X-$Y parts + labor</li><li><strong>Repair:</strong> $X-$Y parts + labor</li></ul></div>"
-                                "<div class='ai-section'><span class='ai-heading'>Is it safe to drive?</span><p>One direct sentence.</p></div>\n\n"
-                                "Always use realistic 2024 US repair costs.")},
-                            {"role":"user","content":prompt}
-                        ]
-                    )
-                    st.session_state["last_answer"] = resp.choices[0].message.content
-                    maint_resp = client.chat.completions.create(
-                        model="gpt-4o-mini",
-                        messages=[
-                            {"role":"system","content":"You are an automotive maintenance advisor. Respond ONLY with the exact HTML structure requested."},
-                            {"role":"user","content":(f"Engine: RPM={rpm}, Oil={oil}, OilTemp={oiltemp}C, CoolantTemp={cool}C, Status={status_map[pred]}. "
-                                "Generate 30/60/90 day schedule with EXACTLY this HTML: "
-                                "<div class='ai-section'><span class='ai-heading'>Next 30 Days</span><ul><li>task with 2024 US cost</li></ul></div>"
-                                "<div class='ai-section'><span class='ai-heading'>Next 60 Days</span><ul><li>task with 2024 US cost</li></ul></div>"
-                                "<div class='ai-section'><span class='ai-heading'>Next 90 Days</span><ul><li>task with 2024 US cost</li></ul></div>")}
-                        ]
-                    )
-                    st.session_state["last_maint"] = maint_resp.choices[0].message.content
-
-            if st.session_state.get("last_answer"):
-                st.markdown(f'<div class="ai-box">{st.session_state["last_answer"]}</div>', unsafe_allow_html=True)
-
-            # --- Inspection Videos ---
-            st.markdown('<div class="section-title" style="margin-top:1rem;">🎬 Inspect It Yourself</div>', unsafe_allow_html=True)
-            if obd_code and obd_info[0] and obd_info[0] != 'Code not found':
-                yt_inspect_q = f"how to inspect {obd_code.upper()} {obd_info[0]} yourself".replace(' ', '+')
-                yt_signs_q = f"symptoms signs of {obd_code.upper()} {obd_info[0]}".replace(' ', '+')
-                yt_fix_q = f"{obd_code.upper()} repair fix DIY".replace(' ', '+')
-                btn_label = obd_code.upper()
-            else:
-                status_terms = {0: "engine routine inspection checklist", 1: "low oil pressure inspect yourself", 2: "engine overheating inspect causes"}
-                yt_inspect_q = status_terms[pred].replace(' ', '+')
-                yt_signs_q = f"warning signs {status_terms[pred]}".replace(' ', '+')
-                yt_fix_q = f"DIY fix {status_terms[pred]}".replace(' ', '+')
-                btn_label = status_map[pred].split()[-1]
+            st.markdown(f'<div class="{class_map[pred]}">{status_map[pred]}</div>', unsafe_allow_html=True)
             st.markdown(f"""
-            <div style="background:#161b22;border:1px solid #21262d;border-radius:8px;padding:14px 16px;">
-                <div style="color:#8b949e;font-size:11px;margin-bottom:12px;">Use these to visually confirm your diagnosis before visiting a mechanic — opens YouTube in a new tab.</div>
-                <a href="https://www.youtube.com/results?search_query={yt_inspect_q}" target="_blank" style="display:inline-block;background:#1f2937;border:1px solid #374151;color:#e6edf3;font-size:12px;font-weight:500;padding:8px 14px;border-radius:6px;text-decoration:none;margin-right:8px;margin-bottom:8px;">
-                    🔍 How to Inspect This Yourself
-                </a>
-                <a href="https://www.youtube.com/results?search_query={yt_signs_q}" target="_blank" style="display:inline-block;background:#1f2937;border:1px solid #374151;color:#e6edf3;font-size:12px;font-weight:500;padding:8px 14px;border-radius:6px;text-decoration:none;margin-right:8px;margin-bottom:8px;">
-                    👁️ What to Look For
-                </a>
-                <a href="https://www.youtube.com/results?search_query={yt_fix_q}" target="_blank" style="display:inline-block;background:#1f2937;border:1px solid #374151;color:#e6edf3;font-size:12px;font-weight:500;padding:8px 14px;border-radius:6px;text-decoration:none;margin-bottom:8px;">
-                    🔧 DIY Fix: {btn_label}
-                </a>
-            </div>
-            """, unsafe_allow_html=True)
-            st.markdown('<div class="section-title" style="margin-top:1rem;">Maintenance Schedule</div>', unsafe_allow_html=True)
-            if st.session_state.get("last_maint"):
-                st.markdown(f'<div class="ai-box">{st.session_state["last_maint"]}</div>', unsafe_allow_html=True)
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Est. Repair Cost</div>
+                    <div class="metric-value">{cost_map[pred]["range"]}</div>
+                    <div style="font-size:10px;color:#484f58;margin-top:4px;">{cost_map[pred]["detail"]}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Model Confidence</div>
+                    <div class="metric-value">{max(proba):.0%}</div>
+                    <div style="font-size:10px;color:#484f58;margin-top:4px;">Based on 19,535 real readings</div>
+                </div>
+            </div>""", unsafe_allow_html=True)
+            st.info(action_map[pred])
 
-            # --- FEATURE 2b: Severity Timeline ---
-            if pred > 0:
-                st.markdown('<div class="section-title" style="margin-top:1rem;">Severity Timeline</div>', unsafe_allow_html=True)
-                if pred == 1:
-                    timeline_color = "#fbbf24"
-                    timeline_bg = "#2a1f0a"
-                    timeline_border = "#92400e"
-                    timeline_msg = "⏱️ At current readings, this could become Critical in <strong>2–4 weeks</strong> without attention. Monitor your oil pressure and coolant temp daily."
+            st.markdown('<div class="section-title">Prediction Breakdown</div>', unsafe_allow_html=True)
+            for lbl, p in zip(['Healthy','At Risk','Critical'], proba):
+                st.progress(float(p), text=f"{lbl}  {p:.0%}")
+
+            # --- FEATURE 1: Compare to Dataset ---
+            st.markdown('<div class="section-title">How Your Engine Compares</div>', unsafe_allow_html=True)
+            sensor_labels = {'rpm':'Engine RPM','oil':'Oil Pressure','fuel':'Fuel Pressure','coolp':'Coolant Pressure','oiltemp':'Oil Temp °C','cool':'Coolant Temp °C'}
+            user_vals = {'rpm':rpm,'oil':oil,'fuel':fuel,'coolp':coolp,'oiltemp':oiltemp,'cool':cool}
+            sensor_flags = {}
+            compare_rows = ""
+            for key, label in sensor_labels.items():
+                uv = user_vals[key]
+                avg = DATASET_STATS[key]['healthy_avg']
+                diff = uv - avg
+                pct = (diff / avg) * 100
+                if abs(pct) < 10:
+                    icon = "🟢"; color = "#4ade80"; note = "Within normal range"
+                    sensor_flags[key] = 'ok'
+                elif abs(pct) < 25:
+                    icon = "🟡"; color = "#fbbf24"; note = f"{'Above' if diff>0 else 'Below'} average by {abs(pct):.0f}%"
+                    sensor_flags[key] = 'warn'
                 else:
-                    timeline_color = "#f87171"
-                    timeline_bg = "#2a0a0a"
-                    timeline_border = "#991b1b"
-                    timeline_msg = "🚨 Critical condition detected. Continued driving risks <strong>permanent engine damage within hours or days</strong>. Do not delay service."
-                st.markdown(f'<div style="background:{timeline_bg};border:1px solid {timeline_border};border-radius:8px;padding:12px 14px;color:{timeline_color};font-size:13px;line-height:1.6;">{timeline_msg}</div>', unsafe_allow_html=True)
+                    icon = "🔴"; color = "#f87171"; note = f"{'Above' if diff>0 else 'Below'} average by {abs(pct):.0f}%"
+                    sensor_flags[key] = 'bad'
+                bar_pct = min(100, max(0, (uv / (DATASET_STATS[key]['max'] or 1)) * 100))
+                compare_rows += f"""
+                <div style="margin-bottom:10px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+                        <span style="color:#e6edf3;font-size:12px;">{icon} {label}</span>
+                        <span style="color:{color};font-size:11px;">{note}</span>
+                    </div>
+                    <div style="background:#21262d;border-radius:4px;height:6px;width:100%;">
+                        <div style="background:{color};height:6px;border-radius:4px;width:{bar_pct:.0f}%;"></div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:10px;color:#484f58;margin-top:2px;">
+                        <span>Your reading: {uv}</span><span>Healthy avg: {avg}</span>
+                    </div>
+                </div>"""
+            st.markdown(f'<div style="background:#161b22;border:1px solid #21262d;border-radius:8px;padding:14px 16px;">{compare_rows}</div>', unsafe_allow_html=True)
 
-            # --- FEATURE 4: Shop Finder ---
-            st.markdown('<div class="section-title" style="margin-top:1rem;">Find a Mechanic</div>', unsafe_allow_html=True)
-            maps_url = "https://www.google.com/maps/search/auto+repair+shop+near+me"
-            urgency_note = "immediately — do not drive" if pred == 2 else "within 1–2 weeks" if pred == 1 else "for your next routine service"
-            st.markdown(f"""
-            <a href="{maps_url}" target="_blank" style="display:inline-block;background:#238636;color:white;font-size:13px;font-weight:600;padding:10px 20px;border-radius:6px;text-decoration:none;margin-bottom:8px;">
-                🗺️ Find Auto Repair Shops Near Me
-            </a>
-            <div style="color:#8b949e;font-size:11px;margin-top:6px;">Based on your diagnosis, visit a mechanic <strong style="color:#e6edf3;">{urgency_note}</strong>.</div>
-            """, unsafe_allow_html=True)
+            # --- FEATURE 1b: Sensor Confidence Breakdown ---
+            bad_sensors = [sensor_labels[k] for k,v in sensor_flags.items() if v == 'bad']
+            warn_sensors = [sensor_labels[k] for k,v in sensor_flags.items() if v == 'warn']
+            if bad_sensors or warn_sensors:
+                flag_html = ""
+                if bad_sensors:
+                    flag_html += f'<div style="color:#f87171;font-size:12px;margin-bottom:4px;">⚠️ Critical sensors: {", ".join(bad_sensors)}</div>'
+                if warn_sensors:
+                    flag_html += f'<div style="color:#fbbf24;font-size:12px;">⚡ Watch these: {", ".join(warn_sensors)}</div>'
+                st.markdown(f'<div style="background:#161b22;border:1px solid #21262d;border-radius:8px;padding:10px 14px;margin-top:8px;">{flag_html}</div>', unsafe_allow_html=True)
 
-            st.markdown('<div class="section-title" style="margin-top:1rem;">Share Results</div>', unsafe_allow_html=True)
-            st.markdown('<div style="color:#8b949e;font-size:11px;margin-bottom:6px;">Copy and share with your mechanic or save for your records.</div>', unsafe_allow_html=True)
-            st.code(result_text, language=None)
+            if obd_code:
+                st.markdown('<div class="section-title">OBD Code Lookup</div>', unsafe_allow_html=True)
+                desc, system = get_code_description(obd_code)
+                if desc != 'Code not found':
+                    st.markdown(f'<div class="obd-found"><strong>{obd_code.upper()}</strong> — {desc}<br><span style="opacity:0.6;font-size:11px;">System: {system}</span></div>', unsafe_allow_html=True)
+                else:
+                    st.warning(f"{obd_code.upper()} not found in the library.")
 
-            # --- FEATURE 4b: CSV Export ---
-            import csv, io
-            csv_buf = io.StringIO()
-            writer = csv.writer(csv_buf)
-            writer.writerow(['Date','Status','RPM','Oil Pressure','Fuel Pressure','Coolant Pressure','Oil Temp','Coolant Temp','OBD Code','Est Cost','Confidence'])
-            writer.writerow([datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), status_map[pred], rpm, oil, fuel, coolp, oiltemp, cool, obd_code or 'None', cost_map[pred]['range'], f"{max(proba):.0%}"])
-            st.download_button("⬇️ Download Diagnosis as CSV", csv_buf.getvalue(), file_name=f"engine_diagnosis_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.csv", mime="text/csv")
+            result_text = f"""ENGINE AI DIAGNOSTIC RESULT
+    ============================
+    Date       : {datetime.datetime.now().strftime("%Y-%m-%d %H:%M")}
+    Status     : {status_map[pred]}
+    Est. Cost  : {cost_map[pred]["range"]}
+    Confidence : {max(proba):.0%}
 
-        if run:
-            st.session_state.history.append({
-            'time':    datetime.datetime.now().strftime('%H:%M:%S'),
-            'status':  status_map[pred],
-            'rpm':     rpm, 'coolant': cool,
-            'oil':     oil, 'fuel':    fuel,
-            'cost':    cost_map[pred]['range'],
-            'obd':     obd_code.upper() if obd_code else '—'
-        })
-    else:
-        st.markdown("""
-        <div style="background:#161b22;border:1px solid #21262d;border-radius:10px;padding:2rem;text-align:center;margin-top:1rem;">
-            <div style="font-size:2rem;margin-bottom:0.8rem;">🔧</div>
-            <div style="color:#e6edf3;font-size:15px;font-weight:500;margin-bottom:0.5rem;">Ready to Diagnose</div>
-            <div style="color:#8b949e;font-size:13px;">Set your sensor readings on the left<br>and click Run Diagnosis</div>
-        </div>""", unsafe_allow_html=True)
+    Sensor Readings:
+      Engine RPM       : {rpm} rpm
+      Oil Pressure     : {oil}
+      Fuel Pressure    : {fuel}
+      Coolant Pressure : {coolp}
+      Oil Temp         : {oiltemp}°C
+      Coolant Temp     : {cool}°C
+      OBD Code         : {obd_code.upper() if obd_code else "None"}
 
-with col_charts:
-    chart_data = [
-        [800,3.3,10.0,2.5,76.0,78.0,0],[1000,4.0,12.0,3.0,74.0,82.0,0],
-        [700,2.5,8.0,2.0,78.0,75.0,0],[900,3.8,11.0,2.8,75.0,80.0,0],
-        [1200,2.0,7.0,1.5,80.0,90.0,1],[600,1.5,5.0,1.2,85.0,100.0,1],
-        [500,1.0,4.0,1.0,90.0,110.0,1],[400,0.8,3.0,0.8,95.0,120.0,2],
-        [300,0.5,2.0,0.5,100.0,150.0,2],[350,0.3,1.5,0.4,105.0,180.0,2],
-    ]
-    df_chart = pd.DataFrame(chart_data, columns=['rpm','oil','fuel','coolp','oiltemp','cool','condition'])
-    df_chart['Status'] = df_chart['condition'].map({0:'Healthy',1:'At Risk',2:'Critical'})
-    if st.session_state.get("has_result"):
-        your = pd.DataFrame([[rpm,oil,fuel,coolp,oiltemp,cool,-1,'Your Reading']],
-                             columns=['rpm','oil','fuel','coolp','oiltemp','cool','condition','Status'])
-        df_chart = pd.concat([df_chart, your], ignore_index=True)
+    Recommended Action:
+      {action_map[pred]}
+    ============================
+    Generated by Engine AI Diagnostic"""
 
-    color_map = {'Healthy':'#4ade80','At Risk':'#fbbf24','Critical':'#f87171','Your Reading':'#60a5fa'}
+            if question or st.session_state.get("last_answer"):
+                st.markdown('<div class="section-title">AI Diagnosis</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="section-title">RPM vs Coolant Temp</div>', unsafe_allow_html=True)
-    fig1 = px.scatter(df_chart, x='rpm', y='cool', color='Status', color_discrete_map=color_map,
-                      template='plotly_dark', labels={'rpm':'Engine RPM','cool':'Coolant Temp (°C)'})
-    fig1.update_layout(margin=dict(t=10,b=10), height=220, paper_bgcolor='#161b22',
-                       plot_bgcolor='#0d1117', legend=dict(font=dict(color='#8b949e'),bgcolor='rgba(0,0,0,0)'),
-                       font=dict(color='#8b949e'))
-    fig1.update_xaxes(gridcolor='#21262d')
-    fig1.update_yaxes(gridcolor='#21262d')
-    st.plotly_chart(fig1, use_container_width=True)
+                if not st.session_state.get("last_answer"):
+                    with st.spinner("Thinking..."):
+                        obd_info = (None, None)
+                        if obd_code:
+                            obd_info = get_code_description(obd_code)
+                        if obd_code and obd_info[0] and obd_info[0] != 'Code not found':
+                            obd_section = (f"IMPORTANT: OBD code {obd_code.upper()} — {obd_info[0]} (System: {obd_info[1]}). "
+                                          "This is the PRIMARY basis. List its direct causes first, then cross-reference sensor readings.")
+                        else:
+                            obd_section = "No OBD code. Base diagnosis on sensor readings and symptoms."
+                        prompt = (f"Engine: RPM={rpm}, Oil={oil}, Fuel={fuel}, CoolantP={coolp}, OilTemp={oiltemp}C, CoolantTemp={cool}C. "
+                                  f"Status: {status_map[pred]}. {obd_section} "
+                                  f"Symptoms: {symptoms or 'None'}. Question: {question} "
+                                  f"Costs: oil $50-150, sensor $100-350, thermostat $150-300, water pump $300-700, "
+                                  f"fuel pump $400-900, oil pump $500-1200, head gasket $1500-3000, rebuild $2500-5000+.")
+                        resp = client.chat.completions.create(
+                            model="gpt-4o-mini",
+                            messages=[
+                                {"role":"system","content":("You are an expert automotive diagnostic technician. Help drivers inspect issues themselves before visiting a mechanic.\n\n"
+                                    "If NOT engine/vehicle related, respond ONLY with: <div class='ai-section'><span class='ai-heading'>Out of my lane!</span><p>I only handle engine diagnostics.</p></div>\n\n"
+                                    "If OBD code provided, it is PRIMARY — list that code's specific causes first, confirm with sensors.\n\n"
+                                    "Respond with EXACTLY this HTML in ORDER:\n"
+                                    "<div class='ai-section'><span class='ai-heading'>What could be causing this</span><ul><li>Most likely cause</li><li>Second cause</li><li>Third cause</li></ul></div>"
+                                    "<div class='ai-section'><span class='ai-heading'>How to check this yourself</span><ol><li>Exact step — where to look, what to touch/smell/hear</li><li>Second step</li><li>What bad vs good looks like</li></ol></div>"
+                                    "<div class='ai-section'><span class='ai-heading'>What to look for</span><ul><li>Visual/smell/sound sign</li><li>Another warning sign</li><li>Sign meaning stop driving immediately</li></ul></div>"
+                                    "<div class='ai-section'><span class='ai-heading'>If you find the problem — estimated repair cost</span><ul><li><strong>Repair:</strong> $X-$Y parts + labor</li><li><strong>Repair:</strong> $X-$Y parts + labor</li></ul></div>"
+                                    "<div class='ai-section'><span class='ai-heading'>Is it safe to drive?</span><p>One direct sentence.</p></div>\n\n"
+                                    "Always use realistic 2024 US repair costs.")},
+                                {"role":"user","content":prompt}
+                            ]
+                        )
+                        st.session_state["last_answer"] = resp.choices[0].message.content
+                        maint_resp = client.chat.completions.create(
+                            model="gpt-4o-mini",
+                            messages=[
+                                {"role":"system","content":"You are an automotive maintenance advisor. Respond ONLY with the exact HTML structure requested."},
+                                {"role":"user","content":(f"Engine: RPM={rpm}, Oil={oil}, OilTemp={oiltemp}C, CoolantTemp={cool}C, Status={status_map[pred]}. "
+                                    "Generate 30/60/90 day schedule with EXACTLY this HTML: "
+                                    "<div class='ai-section'><span class='ai-heading'>Next 30 Days</span><ul><li>task with 2024 US cost</li></ul></div>"
+                                    "<div class='ai-section'><span class='ai-heading'>Next 60 Days</span><ul><li>task with 2024 US cost</li></ul></div>"
+                                    "<div class='ai-section'><span class='ai-heading'>Next 90 Days</span><ul><li>task with 2024 US cost</li></ul></div>")}
+                            ]
+                        )
+                        st.session_state["last_maint"] = maint_resp.choices[0].message.content
 
-    st.markdown('<div class="section-title">RPM vs Oil Pressure</div>', unsafe_allow_html=True)
-    fig2 = px.scatter(df_chart, x='rpm', y='oil', color='Status', color_discrete_map=color_map,
-                      template='plotly_dark', labels={'rpm':'Engine RPM','oil':'Oil Pressure'})
-    fig2.update_layout(margin=dict(t=10,b=10), height=220, paper_bgcolor='#161b22',
-                       plot_bgcolor='#0d1117', legend=dict(font=dict(color='#8b949e'),bgcolor='rgba(0,0,0,0)'),
-                       font=dict(color='#8b949e'))
-    fig2.update_xaxes(gridcolor='#21262d')
-    fig2.update_yaxes(gridcolor='#21262d')
-    st.plotly_chart(fig2, use_container_width=True)
+                if st.session_state.get("last_answer"):
+                    st.markdown(f'<div class="ai-box">{st.session_state["last_answer"]}</div>', unsafe_allow_html=True)
+
+                # --- Inspection Videos ---
+                st.markdown('<div class="section-title" style="margin-top:1rem;">🎬 Inspect It Yourself</div>', unsafe_allow_html=True)
+                if obd_code and obd_info[0] and obd_info[0] != 'Code not found':
+                    yt_inspect_q = f"how to inspect {obd_code.upper()} {obd_info[0]} yourself".replace(' ', '+')
+                    yt_signs_q = f"symptoms signs of {obd_code.upper()} {obd_info[0]}".replace(' ', '+')
+                    yt_fix_q = f"{obd_code.upper()} repair fix DIY".replace(' ', '+')
+                    btn_label = obd_code.upper()
+                else:
+                    status_terms = {0: "engine routine inspection checklist", 1: "low oil pressure inspect yourself", 2: "engine overheating inspect causes"}
+                    yt_inspect_q = status_terms[pred].replace(' ', '+')
+                    yt_signs_q = f"warning signs {status_terms[pred]}".replace(' ', '+')
+                    yt_fix_q = f"DIY fix {status_terms[pred]}".replace(' ', '+')
+                    btn_label = status_map[pred].split()[-1]
+                st.markdown(f"""
+                <div style="background:#161b22;border:1px solid #21262d;border-radius:8px;padding:14px 16px;">
+                    <div style="color:#8b949e;font-size:11px;margin-bottom:12px;">Use these to visually confirm your diagnosis before visiting a mechanic — opens YouTube in a new tab.</div>
+                    <a href="https://www.youtube.com/results?search_query={yt_inspect_q}" target="_blank" style="display:inline-block;background:#1f2937;border:1px solid #374151;color:#e6edf3;font-size:12px;font-weight:500;padding:8px 14px;border-radius:6px;text-decoration:none;margin-right:8px;margin-bottom:8px;">
+                        🔍 How to Inspect This Yourself
+                    </a>
+                    <a href="https://www.youtube.com/results?search_query={yt_signs_q}" target="_blank" style="display:inline-block;background:#1f2937;border:1px solid #374151;color:#e6edf3;font-size:12px;font-weight:500;padding:8px 14px;border-radius:6px;text-decoration:none;margin-right:8px;margin-bottom:8px;">
+                        👁️ What to Look For
+                    </a>
+                    <a href="https://www.youtube.com/results?search_query={yt_fix_q}" target="_blank" style="display:inline-block;background:#1f2937;border:1px solid #374151;color:#e6edf3;font-size:12px;font-weight:500;padding:8px 14px;border-radius:6px;text-decoration:none;margin-bottom:8px;">
+                        🔧 DIY Fix: {btn_label}
+                    </a>
+                </div>
+                """, unsafe_allow_html=True)
+                st.markdown('<div class="section-title" style="margin-top:1rem;">Maintenance Schedule</div>', unsafe_allow_html=True)
+                if st.session_state.get("last_maint"):
+                    st.markdown(f'<div class="ai-box">{st.session_state["last_maint"]}</div>', unsafe_allow_html=True)
+
+                # --- FEATURE 2b: Severity Timeline ---
+                if pred > 0:
+                    st.markdown('<div class="section-title" style="margin-top:1rem;">Severity Timeline</div>', unsafe_allow_html=True)
+                    if pred == 1:
+                        timeline_color = "#fbbf24"
+                        timeline_bg = "#2a1f0a"
+                        timeline_border = "#92400e"
+                        timeline_msg = "⏱️ At current readings, this could become Critical in <strong>2–4 weeks</strong> without attention. Monitor your oil pressure and coolant temp daily."
+                    else:
+                        timeline_color = "#f87171"
+                        timeline_bg = "#2a0a0a"
+                        timeline_border = "#991b1b"
+                        timeline_msg = "🚨 Critical condition detected. Continued driving risks <strong>permanent engine damage within hours or days</strong>. Do not delay service."
+                    st.markdown(f'<div style="background:{timeline_bg};border:1px solid {timeline_border};border-radius:8px;padding:12px 14px;color:{timeline_color};font-size:13px;line-height:1.6;">{timeline_msg}</div>', unsafe_allow_html=True)
+
+                # --- FEATURE 4: Shop Finder ---
+                st.markdown('<div class="section-title" style="margin-top:1rem;">Find a Mechanic</div>', unsafe_allow_html=True)
+                maps_url = "https://www.google.com/maps/search/auto+repair+shop+near+me"
+                urgency_note = "immediately — do not drive" if pred == 2 else "within 1–2 weeks" if pred == 1 else "for your next routine service"
+                st.markdown(f"""
+                <a href="{maps_url}" target="_blank" style="display:inline-block;background:#238636;color:white;font-size:13px;font-weight:600;padding:10px 20px;border-radius:6px;text-decoration:none;margin-bottom:8px;">
+                    🗺️ Find Auto Repair Shops Near Me
+                </a>
+                <div style="color:#8b949e;font-size:11px;margin-top:6px;">Based on your diagnosis, visit a mechanic <strong style="color:#e6edf3;">{urgency_note}</strong>.</div>
+                """, unsafe_allow_html=True)
+
+                st.markdown('<div class="section-title" style="margin-top:1rem;">Share Results</div>', unsafe_allow_html=True)
+                st.markdown('<div style="color:#8b949e;font-size:11px;margin-bottom:6px;">Copy and share with your mechanic or save for your records.</div>', unsafe_allow_html=True)
+                st.code(result_text, language=None)
+
+                # --- FEATURE 4b: CSV Export ---
+                import csv, io
+                csv_buf = io.StringIO()
+                writer = csv.writer(csv_buf)
+                writer.writerow(['Date','Status','RPM','Oil Pressure','Fuel Pressure','Coolant Pressure','Oil Temp','Coolant Temp','OBD Code','Est Cost','Confidence'])
+                writer.writerow([datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), status_map[pred], rpm, oil, fuel, coolp, oiltemp, cool, obd_code or 'None', cost_map[pred]['range'], f"{max(proba):.0%}"])
+                st.download_button("⬇️ Download Diagnosis as CSV", csv_buf.getvalue(), file_name=f"engine_diagnosis_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.csv", mime="text/csv")
+        else:
+            st.markdown("""
+            <div style="background:#161b22;border:1px solid #21262d;border-radius:10px;padding:2rem;text-align:center;margin-top:1rem;">
+                <div style="font-size:2rem;margin-bottom:0.8rem;">🔧</div>
+                <div style="color:#e6edf3;font-size:15px;font-weight:500;margin-bottom:0.5rem;">Ready to Diagnose</div>
+                <div style="color:#8b949e;font-size:13px;">Set your sensor readings on the left<br>and click Run Diagnosis</div>
+            </div>""", unsafe_allow_html=True)
+
+    with col_charts:
+        chart_data = [
+            [800,3.3,10.0,2.5,76.0,78.0,0],[1000,4.0,12.0,3.0,74.0,82.0,0],
+            [700,2.5,8.0,2.0,78.0,75.0,0],[900,3.8,11.0,2.8,75.0,80.0,0],
+            [1200,2.0,7.0,1.5,80.0,90.0,1],[600,1.5,5.0,1.2,85.0,100.0,1],
+            [500,1.0,4.0,1.0,90.0,110.0,1],[400,0.8,3.0,0.8,95.0,120.0,2],
+            [300,0.5,2.0,0.5,100.0,150.0,2],[350,0.3,1.5,0.4,105.0,180.0,2],
+        ]
+        df_chart = pd.DataFrame(chart_data, columns=['rpm','oil','fuel','coolp','oiltemp','cool','condition'])
+        df_chart['Status'] = df_chart['condition'].map({0:'Healthy',1:'At Risk',2:'Critical'})
+        if st.session_state.get("has_result"):
+            your = pd.DataFrame([[rpm,oil,fuel,coolp,oiltemp,cool,-1,'Your Reading']],
+                                 columns=['rpm','oil','fuel','coolp','oiltemp','cool','condition','Status'])
+            df_chart = pd.concat([df_chart, your], ignore_index=True)
+
+        color_map = {'Healthy':'#4ade80','At Risk':'#fbbf24','Critical':'#f87171','Your Reading':'#60a5fa'}
+
+        st.markdown('<div class="section-title">RPM vs Coolant Temp</div>', unsafe_allow_html=True)
+        fig1 = px.scatter(df_chart, x='rpm', y='cool', color='Status', color_discrete_map=color_map,
+                          template='plotly_dark', labels={'rpm':'Engine RPM','cool':'Coolant Temp (°C)'})
+        fig1.update_layout(margin=dict(t=10,b=10), height=220, paper_bgcolor='#161b22',
+                           plot_bgcolor='#0d1117', legend=dict(font=dict(color='#8b949e'),bgcolor='rgba(0,0,0,0)'),
+                           font=dict(color='#8b949e'))
+        fig1.update_xaxes(gridcolor='#21262d')
+        fig1.update_yaxes(gridcolor='#21262d')
+        st.plotly_chart(fig1, use_container_width=True)
+
+        st.markdown('<div class="section-title">RPM vs Oil Pressure</div>', unsafe_allow_html=True)
+        fig2 = px.scatter(df_chart, x='rpm', y='oil', color='Status', color_discrete_map=color_map,
+                          template='plotly_dark', labels={'rpm':'Engine RPM','oil':'Oil Pressure'})
+        fig2.update_layout(margin=dict(t=10,b=10), height=220, paper_bgcolor='#161b22',
+                           plot_bgcolor='#0d1117', legend=dict(font=dict(color='#8b949e'),bgcolor='rgba(0,0,0,0)'),
+                           font=dict(color='#8b949e'))
+        fig2.update_xaxes(gridcolor='#21262d')
+        fig2.update_yaxes(gridcolor='#21262d')
+        st.plotly_chart(fig2, use_container_width=True)
 
 st.markdown('<div class="section-title" style="margin-top:1.5rem;">Diagnosis History</div>', unsafe_allow_html=True)
 if st.session_state.history:
