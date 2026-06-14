@@ -222,35 +222,45 @@ elif st.session_state.screen == 'input':
     with tab1:
         st.markdown('<div class="section-title" style="margin-top:0.5rem;">Sensor Readings</div>', unsafe_allow_html=True)
 
-        st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Engine RPM <span class="normal-range">Normal: 600–2,000</span></div>', unsafe_allow_html=True)
-        st.markdown('<div class="sensor-tip">How fast your engine is spinning — check your dashboard or OBD app.</div>', unsafe_allow_html=True)
-        rpm = st.slider("rpm", 61, 2239, st.session_state.get("est_rpm", 800), 10, label_visibility="collapsed")
-        st.markdown(f'<div class="slider-val">{rpm} rpm</div>', unsafe_allow_html=True)
+        sl_col1, sl_col2, sl_col3 = st.columns(3)
 
-        st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Oil Pressure <span class="normal-range">Normal: 2.5–5.0</span></div>', unsafe_allow_html=True)
-        st.markdown('<div class="sensor-tip">Keeps engine parts lubricated — low oil pressure causes serious damage.</div>', unsafe_allow_html=True)
-        oil = st.slider("oil", 0.0, 7.3, st.session_state.get("est_oil", 3.3), 0.1, label_visibility="collapsed")
-        st.markdown(f'<div class="slider-val">{oil:.1f}</div>', unsafe_allow_html=True)
+        with sl_col1:
+            st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Engine RPM <span class="normal-range">Normal: 600–2,000</span></div>', unsafe_allow_html=True)
+            st.markdown('<div class="sensor-tip">How fast your engine is spinning — check your dashboard or OBD app.</div>', unsafe_allow_html=True)
+            rpm = st.slider("rpm", 61, 2239, st.session_state.get("est_rpm", 800), 10, label_visibility="collapsed")
+            st.markdown(f'<div class="slider-val">{rpm} rpm</div>', unsafe_allow_html=True)
 
-        st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Fuel Pressure <span class="normal-range">Normal: 5.0–20.0</span></div>', unsafe_allow_html=True)
-        st.markdown('<div class="sensor-tip">Pressure delivering fuel to the engine — low means the engine is starved.</div>', unsafe_allow_html=True)
-        fuel = st.slider("fuel", 0.0, 40.0, st.session_state.get("est_fuel", 10.0), 0.1, label_visibility="collapsed")
-        st.markdown(f'<div class="slider-val">{fuel:.1f}</div>', unsafe_allow_html=True)
+        with sl_col2:
+            st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Oil Pressure <span class="normal-range">Normal: 2.5–5.0</span></div>', unsafe_allow_html=True)
+            st.markdown('<div class="sensor-tip">Keeps engine parts lubricated — low oil pressure causes serious damage.</div>', unsafe_allow_html=True)
+            oil = st.slider("oil", 0.0, 7.3, st.session_state.get("est_oil", 3.3), 0.1, label_visibility="collapsed")
+            st.markdown(f'<div class="slider-val">{oil:.1f}</div>', unsafe_allow_html=True)
 
-        st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Coolant Pressure <span class="normal-range">Normal: 1.5–4.0</span></div>', unsafe_allow_html=True)
-        st.markdown('<div class="sensor-tip">Pressure in the cooling system — low means coolant may be leaking.</div>', unsafe_allow_html=True)
-        coolp = st.slider("coolp", 0.0, 8.0, st.session_state.get("est_coolp", 2.5), 0.1, label_visibility="collapsed")
-        st.markdown(f'<div class="slider-val">{coolp:.1f}</div>', unsafe_allow_html=True)
+        with sl_col3:
+            st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Fuel Pressure <span class="normal-range">Normal: 5.0–20.0</span></div>', unsafe_allow_html=True)
+            st.markdown('<div class="sensor-tip">Pressure delivering fuel to the engine — low means the engine is starved.</div>', unsafe_allow_html=True)
+            fuel = st.slider("fuel", 0.0, 40.0, st.session_state.get("est_fuel", 10.0), 0.1, label_visibility="collapsed")
+            st.markdown(f'<div class="slider-val">{fuel:.1f}</div>', unsafe_allow_html=True)
 
-        st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Oil Temp °C <span class="normal-range">Normal: 70–90°C</span></div>', unsafe_allow_html=True)
-        st.markdown('<div class="sensor-tip">Temperature of the engine oil — too hot means poor lubrication.</div>', unsafe_allow_html=True)
-        oiltemp = st.slider("oiltemp", 50.0, 120.0, st.session_state.get("est_oiltemp", 76.0), 0.5, label_visibility="collapsed")
-        st.markdown(f'<div class="slider-val">{oiltemp:.1f}°C</div>', unsafe_allow_html=True)
+        sl_col4, sl_col5, sl_col6 = st.columns(3)
 
-        st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Coolant Temp °C <span class="normal-range">Normal: 70–90°C</span></div>', unsafe_allow_html=True)
-        st.markdown('<div class="sensor-tip">Temperature of the cooling fluid — above 100°C means overheating.</div>', unsafe_allow_html=True)
-        cool = st.slider("cool", 61.0, 196.0, st.session_state.get("est_cool", 78.0), 0.5, label_visibility="collapsed")
-        st.markdown(f'<div class="slider-val">{cool:.1f}°C</div>', unsafe_allow_html=True)
+        with sl_col4:
+            st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Coolant Pressure <span class="normal-range">Normal: 1.5–4.0</span></div>', unsafe_allow_html=True)
+            st.markdown('<div class="sensor-tip">Pressure in the cooling system — low means coolant may be leaking.</div>', unsafe_allow_html=True)
+            coolp = st.slider("coolp", 0.0, 8.0, st.session_state.get("est_coolp", 2.5), 0.1, label_visibility="collapsed")
+            st.markdown(f'<div class="slider-val">{coolp:.1f}</div>', unsafe_allow_html=True)
+
+        with sl_col5:
+            st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Oil Temp °C <span class="normal-range">Normal: 70–90°C</span></div>', unsafe_allow_html=True)
+            st.markdown('<div class="sensor-tip">Temperature of the engine oil — too hot means poor lubrication.</div>', unsafe_allow_html=True)
+            oiltemp = st.slider("oiltemp", 50.0, 120.0, st.session_state.get("est_oiltemp", 76.0), 0.5, label_visibility="collapsed")
+            st.markdown(f'<div class="slider-val">{oiltemp:.1f}°C</div>', unsafe_allow_html=True)
+
+        with sl_col6:
+            st.markdown('<div style="color:#e6edf3;font-size:12px;font-weight:500;margin-bottom:2px;">Coolant Temp °C <span class="normal-range">Normal: 70–90°C</span></div>', unsafe_allow_html=True)
+            st.markdown('<div class="sensor-tip">Temperature of the cooling fluid — above 100°C means overheating.</div>', unsafe_allow_html=True)
+            cool = st.slider("cool", 61.0, 196.0, st.session_state.get("est_cool", 78.0), 0.5, label_visibility="collapsed")
+            st.markdown(f'<div class="slider-val">{cool:.1f}°C</div>', unsafe_allow_html=True)
 
         if st.session_state.get("ai_estimated"):
             st.markdown('''<div style="background:#1f2937;border:1px solid #1f6feb55;border-radius:6px;padding:8px 12px;margin-top:8px;color:#58a6ff;font-size:11px;">⚡ AI-estimated values loaded — adjust the sliders if you know your actual readings.</div>''', unsafe_allow_html=True)
