@@ -354,6 +354,30 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# ── TOP NAVIGATION TABS ──────────────────────────────────────────
+_screen_labels = ["1️⃣ Welcome", "2️⃣ Set Readings", "3️⃣ Results"]
+_screen_keys = ["welcome", "input", "results"]
+_current_idx = _screen_keys.index(st.session_state.screen)
+
+st.markdown("""
+<style>
+div[data-testid="stRadio"] > div { gap: 4px; }
+div[data-testid="stRadio"] label {
+    background:#161b22; border:1px solid #21262d; border-radius:8px;
+    padding:10px 18px; margin:0 4px 12px 0; transition: all 0.2s;
+}
+div[data-testid="stRadio"] label:has(input:checked) {
+    background:#1f6feb22; border-color:#1f6feb; color:#58a6ff;
+}
+</style>
+""", unsafe_allow_html=True)
+
+selected_label = st.radio("nav", _screen_labels, index=_current_idx, horizontal=True, label_visibility="collapsed")
+selected_key = _screen_keys[_screen_labels.index(selected_label)]
+if selected_key != st.session_state.screen:
+    st.session_state.screen = selected_key
+    st.rerun()
+
 # ── SCREEN: WELCOME ──────────────────────────────────────────────
 if st.session_state.screen == 'welcome':
     st.markdown("""
@@ -419,6 +443,14 @@ if st.session_state.screen == 'results':
         <div style="color:#4ade80;font-size:13px;font-weight:600;">✅ Diagnosis complete</div>
     </div>
     """, unsafe_allow_html=True)
+
+    if st.button("🔄 Diagnose Another Vehicle", use_container_width=True):
+        st.session_state["has_result"] = False
+        st.session_state["last_answer"] = None
+        st.session_state["last_maint"] = None
+        st.session_state["ai_estimated"] = False
+        st.session_state.screen = 'input'
+        st.rerun()
 
     tab_diag, tab_next, tab_data = st.tabs(["🔍 Diagnosis", "🛠️ Next Steps", "📊 Data & History"])
 
