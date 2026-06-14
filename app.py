@@ -109,13 +109,79 @@ cost_map = {
     2: {'range': '$900 – $4,500+', 'detail': 'Engine overhaul, pump replacement, or major system failure'},
 }
 
-# ── SIDEBAR ────────────────────────────────────────────────────────
-with st.sidebar:
+st.markdown("""
+<div style="display:flex;align-items:center;justify-content:space-between;padding:0 0 1.2rem 0;margin-bottom:1.2rem;border-bottom:1px solid #21262d;">
+    <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:36px;height:36px;background:#238636;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;">🔧</div>
+        <span style="color:#e6edf3;font-size:17px;font-weight:600;">Engine AI Diagnostic</span>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+        <span style="color:#8b949e;font-size:11px;">Trained on 19,535 real readings</span>
+        <span style="background:#1f6feb22;color:#58a6ff;border:1px solid #1f6feb55;font-size:11px;padding:3px 10px;border-radius:20px;">3,619 OBD codes</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# ── TOP NAVIGATION TABS ──────────────────────────────────────────
+_screen_labels = ["1️⃣ Welcome", "2️⃣ Set Readings", "3️⃣ Results"]
+_screen_keys = ["welcome", "input", "results"]
+_current_idx = _screen_keys.index(st.session_state.screen)
+
+st.markdown("""
+<style>
+div[data-testid="stRadio"] > div { gap: 4px; }
+div[data-testid="stRadio"] label {
+    background:#161b22; border:1px solid #21262d; border-radius:8px;
+    padding:10px 18px; margin:0 4px 12px 0; transition: all 0.2s;
+}
+div[data-testid="stRadio"] label p {
+    color:#e6edf3 !important;
+}
+div[data-testid="stRadio"] label:has(input:checked) {
+    background:#1f6feb22; border-color:#1f6feb;
+}
+div[data-testid="stRadio"] label:has(input:checked) p {
+    color:#58a6ff !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+selected_label = st.radio("nav", _screen_labels, index=_current_idx, horizontal=True, label_visibility="collapsed")
+selected_key = _screen_keys[_screen_labels.index(selected_label)]
+if selected_key != st.session_state.screen:
+    st.session_state.screen = selected_key
+    st.rerun()
+
+# ── SCREEN: WELCOME ──────────────────────────────────────────────
+if st.session_state.screen == 'welcome':
     st.markdown("""
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid #21262d;">
-        <div style="width:34px;height:34px;background:#238636;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;">🔧</div>
-        <span style="color:#e6edf3;font-size:15px;font-weight:600;">Engine AI</span>
-        <span style="background:#1f6feb22;color:#58a6ff;border:1px solid #1f6feb55;font-size:10px;padding:2px 8px;border-radius:20px;">Live</span>
+    <div style="background:#0f1f2a;border:1px solid #1d4e6e;border-radius:12px;padding:40px 32px;margin:2rem auto;max-width:600px;text-align:center;">
+        <div style="font-size:40px;margin-bottom:12px;">🔧</div>
+        <div style="color:#58a6ff;font-size:22px;font-weight:700;margin-bottom:12px;">Welcome to OBDintell</div>
+        <div style="color:#c9d1d9;font-size:14px;line-height:1.7;">
+            Get an instant AI-powered diagnosis of your engine using sensor readings or a simple description of what's wrong.
+            <br><br>
+            No mechanic visit required to find out what's going on.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    col_a, col_b, col_c = st.columns([1,1,1])
+    with col_b:
+        if st.button("Get Started →", use_container_width=True):
+            st.session_state.screen = 'input'
+            st.rerun()
+
+# ── SCREEN: INPUT ────────────────────────────────────────────────
+elif st.session_state.screen == 'input':
+    st.markdown("""
+    <div style="background:#0f1f2a;border:1px solid #1d4e6e;border-radius:10px;padding:18px 20px;margin-bottom:1.2rem;">
+        <div style="color:#58a6ff;font-size:15px;font-weight:600;margin-bottom:6px;">Set Your Sensor Readings</div>
+        <div style="color:#c9d1d9;font-size:13px;line-height:1.6;">
+            Use the sliders below to enter your engine's readings — check your dashboard or a basic OBD scanner.
+            Don't have those numbers? Switch to the <strong style="color:#e6edf3;">"I Don't Know My Readings"</strong> tab and describe what's happening instead.
+            <br><br>
+            Once you're ready, click <strong style="color:#4ade80;">Run Diagnosis</strong> below to get your results.
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -280,6 +346,25 @@ with st.sidebar:
             symptoms = st.session_state.get("est_symptoms", "")
             question = st.session_state.get("est_question", "")
 
+    with st.expander("📖  New here? Click to learn what each sensor means"):
+        exp_cols = st.columns(3)
+        sensors = [
+            ("Engine RPM",       "How fast the engine spins",             "600 – 2,000 rpm"),
+            ("Oil Pressure",     "Lubrication protecting engine parts",    "2.5 – 5.0"),
+            ("Fuel Pressure",    "Fuel delivery to the engine",            "5.0 – 20.0"),
+            ("Coolant Pressure", "Pressure in the cooling system",         "1.5 – 4.0"),
+            ("Oil Temp",         "Temperature of the engine oil",          "70 – 90°C"),
+            ("Coolant Temp",     "Temperature of the cooling fluid",       "70 – 90°C"),
+        ]
+        for i, (name, desc, normal) in enumerate(sensors):
+            with exp_cols[i % 3]:
+                st.markdown(f"""
+                <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px 14px;margin-bottom:8px;">
+                    <div style="color:#e6edf3;font-size:12px;font-weight:600;margin-bottom:4px;">{name}</div>
+                    <div style="color:#c9d1d9;font-size:12px;line-height:1.5;">{desc}</div>
+                    <div style="color:#4ade80;font-size:11px;font-weight:500;margin-top:8px;">✓ Normal range: {normal}</div>
+                </div>""", unsafe_allow_html=True)
+
     # --- FEATURE 2: What-If Live Preview ---
     st.markdown('<div class="section-title" style="margin-top:0.5rem;">⚡ Live Prediction</div>', unsafe_allow_html=True)
     live_reading = pd.DataFrame([[rpm,oil,fuel,coolp,oiltemp,cool]], columns=features)
@@ -307,167 +392,40 @@ with st.sidebar:
         run = True
         st.session_state["demo_mode"] = False
 
-# ── MAIN ───────────────────────────────────────────────────────────
 
-# Handle Run Diagnosis click — compute and store, then switch to results screen
-if run:
-    reading = pd.DataFrame([[rpm,oil,fuel,coolp,oiltemp,cool]], columns=features)
-    pred    = model.predict(reading)[0]
-    proba   = model.predict_proba(reading)[0]
-    while len(proba) < 3:
-        proba = list(proba) + [0.0]
-    st.session_state["last_pred"] = int(pred)
-    st.session_state["last_proba"] = [float(p) for p in proba]
-    st.session_state["last_rpm"] = rpm
-    st.session_state["last_oil"] = oil
-    st.session_state["last_fuel"] = fuel
-    st.session_state["last_coolp"] = coolp
-    st.session_state["last_oiltemp"] = oiltemp
-    st.session_state["last_cool"] = cool
-    st.session_state["last_obd"] = obd_code
-    st.session_state["last_symptoms"] = symptoms
-    st.session_state["last_question"] = question
-    st.session_state["has_result"] = True
-    st.session_state.screen = 'results'
+    # Handle Run Diagnosis click — compute and store, then switch to results screen
+    if run:
+        reading = pd.DataFrame([[rpm,oil,fuel,coolp,oiltemp,cool]], columns=features)
+        pred    = model.predict(reading)[0]
+        proba   = model.predict_proba(reading)[0]
+        while len(proba) < 3:
+            proba = list(proba) + [0.0]
+        st.session_state["last_pred"] = int(pred)
+        st.session_state["last_proba"] = [float(p) for p in proba]
+        st.session_state["last_rpm"] = rpm
+        st.session_state["last_oil"] = oil
+        st.session_state["last_fuel"] = fuel
+        st.session_state["last_coolp"] = coolp
+        st.session_state["last_oiltemp"] = oiltemp
+        st.session_state["last_cool"] = cool
+        st.session_state["last_obd"] = obd_code
+        st.session_state["last_symptoms"] = symptoms
+        st.session_state["last_question"] = question
+        st.session_state["has_result"] = True
+        st.session_state.screen = 'results'
 
-    _status_map = {0:'🟢  HEALTHY', 1:'🟡  AT RISK', 2:'🔴  CRITICAL'}
-    st.session_state.history.append({
-        'time':    datetime.datetime.now().strftime('%H:%M:%S'),
-        'status':  _status_map[int(pred)],
-        'rpm':     rpm, 'coolant': cool,
-        'oil':     oil, 'fuel':    fuel,
-        'cost':    cost_map[int(pred)]['range'],
-        'obd':     obd_code.upper() if obd_code else '—'
-    })
+        _status_map = {0:'🟢  HEALTHY', 1:'🟡  AT RISK', 2:'🔴  CRITICAL'}
+        st.session_state.history.append({
+            'time':    datetime.datetime.now().strftime('%H:%M:%S'),
+            'status':  _status_map[int(pred)],
+            'rpm':     rpm, 'coolant': cool,
+            'oil':     oil, 'fuel':    fuel,
+            'cost':    cost_map[int(pred)]['range'],
+            'obd':     obd_code.upper() if obd_code else '—'
+        })
 
-    st.rerun()
-st.markdown("""
-<div style="display:flex;align-items:center;justify-content:space-between;padding:0 0 1.2rem 0;margin-bottom:1.2rem;border-bottom:1px solid #21262d;">
-    <div style="display:flex;align-items:center;gap:12px;">
-        <div style="width:36px;height:36px;background:#238636;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;">🔧</div>
-        <span style="color:#e6edf3;font-size:17px;font-weight:600;">Engine AI Diagnostic</span>
-    </div>
-    <div style="display:flex;gap:10px;align-items:center;">
-        <span style="color:#8b949e;font-size:11px;">Trained on 19,535 real readings</span>
-        <span style="background:#1f6feb22;color:#58a6ff;border:1px solid #1f6feb55;font-size:11px;padding:3px 10px;border-radius:20px;">3,619 OBD codes</span>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+        st.rerun()
 
-# ── TOP NAVIGATION TABS ──────────────────────────────────────────
-_screen_labels = ["1️⃣ Welcome", "2️⃣ Set Readings", "3️⃣ Results"]
-_screen_keys = ["welcome", "input", "results"]
-_current_idx = _screen_keys.index(st.session_state.screen)
-
-st.markdown("""
-<style>
-div[data-testid="stRadio"] > div { gap: 4px; }
-div[data-testid="stRadio"] label {
-    background:#161b22; border:1px solid #21262d; border-radius:8px;
-    padding:10px 18px; margin:0 4px 12px 0; transition: all 0.2s;
-}
-div[data-testid="stRadio"] label p {
-    color:#e6edf3 !important;
-}
-div[data-testid="stRadio"] label:has(input:checked) {
-    background:#1f6feb22; border-color:#1f6feb;
-}
-div[data-testid="stRadio"] label:has(input:checked) p {
-    color:#58a6ff !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
-selected_label = st.radio("nav", _screen_labels, index=_current_idx, horizontal=True, label_visibility="collapsed")
-selected_key = _screen_keys[_screen_labels.index(selected_label)]
-if selected_key != st.session_state.screen:
-    st.session_state.screen = selected_key
-    st.rerun()
-
-# ── SCREEN: WELCOME ──────────────────────────────────────────────
-if st.session_state.screen == 'welcome':
-    st.markdown("""
-    <div style="background:#0f1f2a;border:1px solid #1d4e6e;border-radius:12px;padding:40px 32px;margin:2rem auto;max-width:600px;text-align:center;">
-        <div style="font-size:40px;margin-bottom:12px;">🔧</div>
-        <div style="color:#58a6ff;font-size:22px;font-weight:700;margin-bottom:12px;">Welcome to OBDintell</div>
-        <div style="color:#c9d1d9;font-size:14px;line-height:1.7;">
-            Get an instant AI-powered diagnosis of your engine using sensor readings or a simple description of what's wrong.
-            <br><br>
-            No mechanic visit required to find out what's going on.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    col_a, col_b, col_c = st.columns([1,1,1])
-    with col_b:
-        if st.button("Get Started →", use_container_width=True):
-            st.session_state.screen = 'input'
-            st.rerun()
-
-# ── SCREEN: INPUT ────────────────────────────────────────────────
-elif st.session_state.screen == 'input':
-    st.markdown("""
-    <div style="background:#0f1f2a;border:1px solid #1d4e6e;border-radius:10px;padding:18px 20px;margin-bottom:1.2rem;">
-        <div style="color:#58a6ff;font-size:15px;font-weight:600;margin-bottom:6px;">Set Your Sensor Readings</div>
-        <div style="color:#c9d1d9;font-size:13px;line-height:1.6;">
-            Use the sliders on the left to enter your engine's readings — check your dashboard or a basic OBD scanner.
-            Don't have those numbers? Switch to the <strong style="color:#e6edf3;">"I Don't Know My Readings"</strong> tab and describe what's happening instead.
-            <br><br>
-            Once you're ready, click <strong style="color:#4ade80;">Run Diagnosis</strong> to get your results.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Live summary of current slider values
-    normal_ranges = {'rpm':(600,2000),'oil':(2.5,5.0),'fuel':(5.0,20.0),'coolp':(1.5,4.0),'oiltemp':(70,90),'cool':(70,90)}
-    summary_rows = [
-        ("Engine RPM", f"{rpm} rpm", rpm, *normal_ranges['rpm']),
-        ("Oil Pressure", f"{oil:.1f}", oil, *normal_ranges['oil']),
-        ("Fuel Pressure", f"{fuel:.1f}", fuel, *normal_ranges['fuel']),
-        ("Coolant Pressure", f"{coolp:.1f}", coolp, *normal_ranges['coolp']),
-        ("Oil Temp", f"{oiltemp:.1f}°C", oiltemp, *normal_ranges['oiltemp']),
-        ("Coolant Temp", f"{cool:.1f}°C", cool, *normal_ranges['cool']),
-    ]
-    cards_html = ""
-    for label, val_str, val, lo, hi in summary_rows:
-        if lo <= val <= hi:
-            dot, col = "🟢", "#4ade80"
-        elif val < lo * 0.75 or val > hi * 1.25:
-            dot, col = "🔴", "#f87171"
-        else:
-            dot, col = "🟡", "#fbbf24"
-        cards_html += f'''<div style="background:#161b22;border:1px solid #21262d;border-radius:8px;padding:14px;text-align:center;">
-            <div style="color:#8b949e;font-size:11px;margin-bottom:6px;">{dot} {label}</div>
-            <div style="color:{col};font-size:18px;font-weight:700;">{val_str}</div>
-        </div>'''
-    st.markdown(f'''<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.2rem;">{cards_html}</div>''', unsafe_allow_html=True)
-    st.markdown('<div style="color:#8b949e;font-size:11px;text-align:center;margin-top:-8px;margin-bottom:1.2rem;">Adjust the sliders in the sidebar — these values update live.</div>', unsafe_allow_html=True)
-
-    with st.expander("📖  New here? Click to learn what each sensor means"):
-        cols = st.columns(3)
-        sensors = [
-            ("Engine RPM",       "How fast the engine spins",             "600 – 2,000 rpm"),
-            ("Oil Pressure",     "Lubrication protecting engine parts",    "2.5 – 5.0"),
-            ("Fuel Pressure",    "Fuel delivery to the engine",            "5.0 – 20.0"),
-            ("Coolant Pressure", "Pressure in the cooling system",         "1.5 – 4.0"),
-            ("Oil Temp",         "Temperature of the engine oil",          "70 – 90°C"),
-            ("Coolant Temp",     "Temperature of the cooling fluid",       "70 – 90°C"),
-        ]
-        for i, (name, desc, normal) in enumerate(sensors):
-            with cols[i % 3]:
-                st.markdown(f"""
-                <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px 14px;margin-bottom:8px;">
-                    <div style="color:#e6edf3;font-size:12px;font-weight:600;margin-bottom:4px;">{name}</div>
-                    <div style="color:#c9d1d9;font-size:12px;line-height:1.5;">{desc}</div>
-                    <div style="color:#4ade80;font-size:11px;font-weight:500;margin-top:8px;">✓ Normal range: {normal}</div>
-                </div>""", unsafe_allow_html=True)
-
-    st.markdown("""
-    <div style="text-align:center;padding:6px 0 2px;margin-bottom:4px;">
-        <span style="color:#8b949e;font-size:11px;letter-spacing:0.05em;">↑ &nbsp; Click Run Diagnosis in the sidebar when you're ready &nbsp; ↑</span>
-    </div>
-    """, unsafe_allow_html=True)
-
-# ── SCREEN: RESULTS ──────────────────────────────────────────────
 if st.session_state.screen == 'results':
     st.markdown("""
     <div style="background:#0f2a1a;border:1px solid #166534;border-radius:10px;padding:14px 20px;margin-bottom:1.2rem;">
