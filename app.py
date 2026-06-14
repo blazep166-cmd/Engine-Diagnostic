@@ -366,8 +366,14 @@ div[data-testid="stRadio"] label {
     background:#161b22; border:1px solid #21262d; border-radius:8px;
     padding:10px 18px; margin:0 4px 12px 0; transition: all 0.2s;
 }
+div[data-testid="stRadio"] label p {
+    color:#e6edf3 !important;
+}
 div[data-testid="stRadio"] label:has(input:checked) {
-    background:#1f6feb22; border-color:#1f6feb; color:#58a6ff;
+    background:#1f6feb22; border-color:#1f6feb;
+}
+div[data-testid="stRadio"] label:has(input:checked) p {
+    color:#58a6ff !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -410,6 +416,31 @@ elif st.session_state.screen == 'input':
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+    # Live summary of current slider values
+    normal_ranges = {'rpm':(600,2000),'oil':(2.5,5.0),'fuel':(5.0,20.0),'coolp':(1.5,4.0),'oiltemp':(70,90),'cool':(70,90)}
+    summary_rows = [
+        ("Engine RPM", f"{rpm} rpm", rpm, *normal_ranges['rpm']),
+        ("Oil Pressure", f"{oil:.1f}", oil, *normal_ranges['oil']),
+        ("Fuel Pressure", f"{fuel:.1f}", fuel, *normal_ranges['fuel']),
+        ("Coolant Pressure", f"{coolp:.1f}", coolp, *normal_ranges['coolp']),
+        ("Oil Temp", f"{oiltemp:.1f}°C", oiltemp, *normal_ranges['oiltemp']),
+        ("Coolant Temp", f"{cool:.1f}°C", cool, *normal_ranges['cool']),
+    ]
+    cards_html = ""
+    for label, val_str, val, lo, hi in summary_rows:
+        if lo <= val <= hi:
+            dot, col = "🟢", "#4ade80"
+        elif val < lo * 0.75 or val > hi * 1.25:
+            dot, col = "🔴", "#f87171"
+        else:
+            dot, col = "🟡", "#fbbf24"
+        cards_html += f'''<div style="background:#161b22;border:1px solid #21262d;border-radius:8px;padding:14px;text-align:center;">
+            <div style="color:#8b949e;font-size:11px;margin-bottom:6px;">{dot} {label}</div>
+            <div style="color:{col};font-size:18px;font-weight:700;">{val_str}</div>
+        </div>'''
+    st.markdown(f'''<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.2rem;">{cards_html}</div>''', unsafe_allow_html=True)
+    st.markdown('<div style="color:#8b949e;font-size:11px;text-align:center;margin-top:-8px;margin-bottom:1.2rem;">Adjust the sliders in the sidebar — these values update live.</div>', unsafe_allow_html=True)
 
     with st.expander("📖  New here? Click to learn what each sensor means"):
         cols = st.columns(3)
